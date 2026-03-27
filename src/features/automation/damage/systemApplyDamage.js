@@ -1,5 +1,4 @@
 import { MODULE } from '../../../common/module.js';
-import { checkMassiveDamage } from '../../../integration/moduleSockets.js';
 import { abilityDeltaCalculation } from './ability.js';
 import { buildAbilityDmgEntries, splitAbilityInstances } from './abilityTags.js';
 import { applyNasDefenseBypass } from './nasBypass.js';
@@ -27,9 +26,6 @@ export function registerSystemApplyDamage() {
         MODULE.ID,
         "pf1.documents.actor.ActorPF.applyDamage",
         async function (wrapped, value = 0, options = {}) {
-            if (!game.settings.get(MODULE.ID, "enableDamageAutomation")) {
-                return wrapped(value, options);
-            }
             if (value === 0 || !Number.isFinite(value)) return wrapped(value, options);
 
             if (options._nasDamageDialog) return wrapped(value, options);
@@ -44,18 +40,7 @@ export function registerSystemApplyDamage() {
             if (!targets.length) return false;
 
             const isHealing = (value < 0) || options.isHealing === true;
-            const hasExplicitTargets = options?.targets != null;
-            const hasClickContext = options?.element != null || options?.event != null || options?.message != null;
-            if (isHealing && hasExplicitTargets && !hasClickContext) {
-                return wrapped(value, options);
-            }
-            let ratio = Number(options?.ratio);
-            if (!(Number.isFinite(ratio) && ratio > 0)) {
-                const elRatio = Number(options?.element?.dataset?.ratio);
-                if (Number.isFinite(elRatio) && elRatio > 0 && Array.isArray(options?.instances) && options.instances.length) {
-                    ratio = elRatio;
-                }
-            }
+            const ratio = Number(options?.ratio);
             const hasRatio = Number.isFinite(ratio) && ratio > 0 && ratio !== 1;
 
             const calcOpts = {
@@ -160,31 +145,7 @@ export function registerSystemApplyDamage() {
                 const applyDamageOpts = app._getTargetDamageOptions(targetModel);
                 applyDamageOpts._nasDamageDialog = true;
 
-                promises.push((async () => {
-                    const result = await wrapped.call(actor, appliedValue, applyDamageOpts);
-                    if (result && game.settings.get(MODULE.ID, "massiveDamage")) {
-                        const token =
-                            actor?.token?.object ??
-                            actor?.token ??
-                            actor?.getActiveTokens?.(true, true)?.[0] ??
-                            actor?.getActiveTokens?.()?.[0] ??
-                            null;
-
-                        if (token) {
-                            // Mirror ActorPF.applyDamage's ratio/reduction math to get the final applied damage value.
-                            let finalDamage = Math.floor(Math.max(0, appliedValue) * (applyDamageOpts?.ratio ?? 1));
-                            finalDamage -= Math.min(finalDamage, applyDamageOpts?.reduction ?? 0);
-                            finalDamage = Math.floor(finalDamage);
-
-                            if (finalDamage > 0) {
-                                const maxHP = actor?.system?.attributes?.hp?.max ?? 0;
-                                checkMassiveDamage(finalDamage, maxHP, token);
-                            }
-                        }
-                    }
-
-                    return result;
-                })());
+                promises.push(wrapped.call(actor, appliedValue, applyDamageOpts));
             }
 
             return Promise.all(promises);

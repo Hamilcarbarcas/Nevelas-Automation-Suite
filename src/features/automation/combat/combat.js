@@ -4,88 +4,7 @@ import { handleConfusionCondition, handleConfusionOnCombatStart } from '../condi
 import { resolveBuffReference, activateVariantForTarget } from '../buffs/buffs.js';
 import { handleFlatFootedCondition, resetCombatFlags, resetExemptFlags, updateFlatFootedTracker } from '../conditions/flatfooted/flatfooted.js';
 
-const SURPRISED_FLAG = "surprisedInSurpriseRound";
-const SURPRISE_ELIGIBLE_FLAG = "surpriseEligible";
 
-function isUsingTrackerSurprisedMode(combat) {
-  const turns = combat?.turns ?? [];
-  return turns.some((c) => c?.getFlag?.(MODULE.ID, SURPRISED_FLAG) !== undefined);
-}
-
-function isSurpriseEligibleCombatant(combatant, { useTrackerSurprisedMode = false } = {}) {
-  if (!combatant) return false;
-
-  if (useTrackerSurprisedMode) {
-    const surprisedFlag = combatant.getFlag?.(MODULE.ID, SURPRISED_FLAG);
-    return !Boolean(surprisedFlag);
-  }
-
-  const eligibleFlag = combatant.getFlag?.(MODULE.ID, SURPRISE_ELIGIBLE_FLAG);
-  if (eligibleFlag !== undefined) return Boolean(eligibleFlag);
-
-  const actorFlagValue = combatant.actor?.getFlag?.(MODULE.ID, "exemptFromSurprise");
-  return Boolean(actorFlagValue);
-}
-
-function getFirstSurpriseActingTokenId(combat) {
-  const turns = combat?.turns ?? [];
-  if (!Array.isArray(turns) || turns.length === 0) return null;
-  if (!game.settings.get(MODULE.ID, "skipSurprisedTokens")) return null;
-
-  const useTrackerSurprisedMode = isUsingTrackerSurprisedMode(combat);
-  for (const combatant of turns) {
-    if (isSurpriseEligibleCombatant(combatant, { useTrackerSurprisedMode })) {
-      return combatant?.tokenId ?? combatant?.token?.id ?? null;
-    }
-  }
-  return null;
-}
-
-function isBackwardTurnMovement(combat) {
-  const prevRound = combat?.previous?.round;
-  const prevTurn = combat?.previous?.turn;
-  const currRound = combat?.round;
-  const currTurn = combat?.turn;
-
-  if (!Number.isFinite(prevRound) || !Number.isFinite(currRound)) return false;
-  if (!Number.isFinite(prevTurn) || !Number.isFinite(currTurn)) return false;
-
-  return (prevRound > currRound) || (prevRound === currRound && prevTurn > currTurn);
-}
-
-export async function skipIneligibleSurpriseCombatants(combat) {
-  if (!game.user?.isGM) return false;
-  if (!combat?.combatant) return false;
-  if (!game.settings.get(MODULE.ID, 'skipSurprisedTokens')) return false;
-
-  const isSurprise = combat.getFlag?.(MODULE.ID, 'isSurprise') || false;
-  if (!isSurprise) return false;
-
-  if (combat.round !== 1) return false;
-
-  if (isBackwardTurnMovement(combat)) return false;
-
-  const turns = combat.turns ?? [];
-  if (!Array.isArray(turns) || turns.length === 0) return false;
-  const useTrackerSurprisedMode = isUsingTrackerSurprisedMode(combat);
-
-  const currentTurnIndex = Number.isFinite(combat.turn) ? combat.turn : 0;
-  const currentCombatant = combat.combatant;
-  if (isSurpriseEligibleCombatant(currentCombatant, { useTrackerSurprisedMode })) return false;
-
-  for (let offset = 1; offset <= turns.length; offset++) {
-    const idx = (currentTurnIndex + offset) % turns.length;
-    const candidate = turns[idx];
-    const candidateIsEligible = isSurpriseEligibleCombatant(candidate, { useTrackerSurprisedMode });
-    if (candidateIsEligible) {
-      await combat.update({ turn: idx }, { nasSurpriseSkip: true });
-      return true;
-    }
-  }
-
-  await combat.update({ round: 2, turn: 0 }, { nasSurpriseSkip: true });
-  return true;
-}
 
 export async function handleFlatFootedOnCombatStart(combat, combatant, token, turnIndex, highestInitiative, isSurprise) {
   if (!game.settings.get(MODULE.ID, 'autoApplyFF')) return;
@@ -105,37 +24,9 @@ export async function handleFlatFootedOnCombatStart(combat, combatant, token, tu
   const processedActors = combat.getFlag(MODULE.ID, "flatFootedProcessed") || [];
   if (processedActors.includes(token.id)) return;
   
-  const useTrackerSurprisedMode = isUsingTrackerSurprisedMode(combat);
-  const isEligibleForSurprise = isSurpriseEligibleCombatant(combatant, { useTrackerSurprisedMode });
-  const firstActingSurpriseTokenId = isSurprise ? getFirstSurpriseActingTokenId(combat) : null;
-  const isFirstActingSurpriseToken =
-    Boolean(firstActingSurpriseTokenId) &&
-    (token.id === firstActingSurpriseTokenId || combatant?.tokenId === firstActingSurpriseTokenId);
-
-  const isFlatFootedUntilTurnByRules = isSurprise
-    ? (!isEligibleForSurprise || combatant.initiative < highestInitiative)
-  : combatant.initiative < highestInitiative;
+  const exemptFromSurprise = actor.getFlag(MODULE.ID, 'exemptFromSurprise') || false;
+  const isFlatFootedUntilTurn = (isSurprise && !exemptFromSurprise) || combatant.initiative < highestInitiative;
   
-  const isFlatFootedUntilTurn = isSurprise && isFirstActingSurpriseToken
-    ? false
-    : isFlatFootedUntilTurnByRules;
-
-    if (!isFlatFootedUntilTurn && isSurprise && isFirstActingSurpriseToken) {
-      const ffTracker = combat.getFlag(MODULE.ID, "flatFootedTracker") || {};
-      ffTracker[token.id] = {
-        tokenId: token.id,
-        wasFlatFooted: false,
-        appliedOnRound: 1,
-        appliedOnTurn: turnIndex,
-        targetRemovalRound: 1,
-        removalInfo: {
-          removedOnRound: 1,
-          removedOnTurn: turnIndex,
-        },
-      };
-      await combat.setFlag(MODULE.ID, "flatFootedTracker", ffTracker);
-    }
-
   if (isFlatFootedUntilTurn) {
     await actor.setCondition("flatFooted", true);
     
@@ -144,7 +35,7 @@ export async function handleFlatFootedOnCombatStart(combat, combatant, token, tu
       wasFlatFooted: true,
       appliedOnRound: 1, 
       appliedOnTurn: turnIndex,
-      targetRemovalRound: isSurprise && !isEligibleForSurprise ? 2 : 1,
+      targetRemovalRound: isSurprise && !exemptFromSurprise ? 2 : 1,
       removalInfo: null
     };
     
@@ -221,22 +112,16 @@ export async function handleCombatRound(combat, round) {
       const trackerData = ffTracker[tokenId];
       if (!trackerData) continue;
     
-      const removedOnRound = trackerData?.removalInfo?.removedOnRound;
-      const removedOnTurn = trackerData?.removalInfo?.removedOnTurn;
-      const hasRemovalInfo = Number.isFinite(removedOnRound) && Number.isFinite(removedOnTurn);
-      const shouldHaveFlatFooted = hasRemovalInfo
-        ? (
-          removedOnRound > currentRound ||
-          (removedOnRound === currentRound && removedOnTurn > currentTurn)
-        )
-        : Boolean(trackerData?.wasFlatFooted);
+      
+      const shouldHaveFlatFooted = 
+        trackerData.wasFlatFooted &&
+        (i >= currentTurn || currentRound < trackerData.targetRemovalRound);
       
       if (shouldHaveFlatFooted && !token.actor.statuses.has("flatFooted")) {
         await token.actor.setCondition("flatFooted", true);
         
         if (trackerData.removalInfo) {
           trackerData.removalInfo = null;
-          trackerData.wasFlatFooted = true;
           ffTracker[tokenId] = trackerData;
         }
       } else if (!shouldHaveFlatFooted && token.actor.statuses.has("flatFooted")) {

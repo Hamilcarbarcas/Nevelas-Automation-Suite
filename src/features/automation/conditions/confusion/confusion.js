@@ -71,28 +71,19 @@ export function getBehaviorData(actor, rollResult) {
   } else if (rollResult <= 50) {
     return { id: 2, description: game.i18n.localize("NAS.conditions.confused.effects.2") };
   } else if (rollResult <= 75) {
-    const meleeItems = actor.items.filter((item) => {
-      const actions = Array.isArray(item?.system?.actions) ? item.system.actions : [];
-      const hasMeleeAttackAction = actions.some((action) => action?.actionType === "mwak");
-      if (!hasMeleeAttackAction) return false;
-
-      // Support both regular weapons and natural attack items.
-      if (item?.type === "weapon") return !item?.system?.broken;
-      if (item?.type === "attack") return true;
-      return false;
-    });
+    const meleeItems = actor.items.filter(i => 
+      i.type === "weapon" &&
+      i.system.actions.some(a => a.actionType === "mwak") &&
+      !i.system.broken
+    );
     
     const strMod = actor.system.abilities.str.mod;
     if (meleeItems.length > 0) {
       const selectedItem = meleeItems[Math.floor(Math.random() * meleeItems.length)];
-      const selectedAction =
-      (Array.isArray(selectedItem?.system?.actions)
-        ? selectedItem.system.actions.find((action) => action?.actionType === "mwak")
-        : null) ?? null;
-        const damagePart = selectedAction?.damage?.parts?.[0];
-        const damageTypes = Array.isArray(damagePart?.types) && damagePart.types.length
-          ? damagePart.types
-          : ["bludgeoning"];
+      
+      const baseDamage = selectedItem.system.actions[0].damage.parts.length ? selectedItem.system.actions[0].damage.parts[0].formula : "1d8";
+      const damageTypes = selectedItem.system.actions[0].damage.parts.length && selectedItem.system.actions[0].damage.parts[0].types.length ? 
+                          selectedItem.system.actions[0].damage.parts[0].types : ["bludgeoning"];
       
       return { 
         id: 3, 
@@ -103,12 +94,11 @@ export function getBehaviorData(actor, rollResult) {
         itemUsed: selectedItem
       };
     } else {
-      const fallbackDamageTypes = ["bludgeoning"];
       return { 
         id: 3, 
         description: game.i18n.localize("NAS.conditions.confused.effects.3b"),
         damageFormula: `1d8 + ${strMod}`,
-        damageTypes: fallbackDamageTypes
+        damageTypes: damageTypes
       };
     }
   } else {

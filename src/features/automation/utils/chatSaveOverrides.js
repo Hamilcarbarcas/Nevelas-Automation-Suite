@@ -189,6 +189,7 @@ async function resolveTargetsFromMessage(message) {
   const uuids =
     message?.flags?.[MODULE.ID]?.targets ??
     message?.system?.targets ??
+    message?.data?.system?.targets ??
     [];
   if (!Array.isArray(uuids) || uuids.length === 0) return [];
   const resolved = await Promise.all(
@@ -316,7 +317,6 @@ export function registerPersistentSpellSaveOverrides(html) {
   root.addEventListener(
     "click",
     async (event) => {
-      if (!game.settings.get(MODULE.ID, "enableMetamagicAutomation")) return;
       const button = event.target?.closest?.(SAVE_BUTTON_SELECTOR);
       if (!button) return;
       const message = getMessageFromEvent(event);

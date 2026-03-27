@@ -41,7 +41,7 @@ export function registerConditions(registry) {
     },
     {
       namespace: MODULE.ID,
-      key: "concealed",
+      key: "concealment",
       value: {
         journal: "Compendium.nevelas-automation-suite.Conditions.JournalEntry.7OPIeT3M6ahk31kn.JournalEntryPage.kfctyAUASIwxLFYG",
         flags: {},
@@ -49,10 +49,10 @@ export function registerConditions(registry) {
           changes: [],
           flags: []
         },
-        name: game.i18n.localize("NAS.conditions.list.concealed.label"),
+        name: game.i18n.localize("NAS.conditions.list.concealment.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/concealed.png",
+        texture: "modules/nevelas-automation-suite/src/icons/concealment.png",
         track: ""
       }
     },
@@ -99,10 +99,7 @@ export function registerConditions(registry) {
         journal: "Compendium.nevelas-automation-suite.Conditions.JournalEntry.7OPIeT3M6ahk31kn.JournalEntryPage.QeJmifftmLMo2MOl",
         flags: {},
         mechanics: {
-          changes: [
-            {"formula": "-4", "operator": "add", "target": "dexPen", "type": "untyped", "priority": 0}, 
-            {"formula": "-2", "operator": "add", "target": "attack", "type": "untyped", "priority": 0}
-          ],
+          changes: [],
           flags: []
         },
         name: game.i18n.localize("NAS.conditions.list.grappling.label"),
@@ -216,6 +213,6 @@ export function setupConditionsI18n(t) {
   t.conditions.burning = "NAS.conditions.list.burning.description";
   t.conditions.grappling = "NAS.conditions.list.grappling.description";
   t.conditions.grappled = "NAS.conditions.list.grappled.description";
-  t.conditions.concealed = "NAS.conditions.list.concealed.description";
+  t.conditions.concealment = "NAS.conditions.list.concealment.description";
 } 
 

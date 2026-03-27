@@ -1,12 +1,7 @@
 import { resolveEnglishName } from "./compendiumNameResolver.js";
 import { resolveMetamagicNameFromDatabase } from "../metamagic/metamagic.js";
-import { getKineticistMetamagicSources } from "../metamagic/classes/index.js";
-import { getKineticInvocationSpellMetamagicSources } from "../metamagic/classes/index.js";
-import { createGrappleCmbAttackEntry } from "../conditions/grappled/grappled.js";
 
 export const GRAPPLE_FORM_KEY = "grapple";
-export const GRAPPLE_CMB_ATTACK_TYPE = "nas-grapple-cmb";
-export const GRAPPLE_CMB_MARKER = "0[NAS_Grapple_CMB]";
 export const METAMAGIC_FORM_KEY = "metamagic";
 export const METAMAGIC_SELECT_KEY = "metamagicSelection";
 export const METAMAGIC_NAMES_KEY = "metamagicNames";
@@ -48,69 +43,19 @@ function getFlagsContainer(form) {
   return container;
 }
 
-function createGrappleCmbDialogAttack(dialog) {
-  const base = createGrappleCmbAttackEntry();
-  const AttackUseAttackCtor = dialog?.attacks?.[0]?.constructor ?? pf1?.actionUse?.ActionUseAttack;
-  const attack = AttackUseAttackCtor
-    ? new AttackUseAttackCtor(base.label, GRAPPLE_CMB_MARKER, null, {
-      abstract: true,
-      type: GRAPPLE_CMB_ATTACK_TYPE,
-    })
-    : {
-      label: base.label,
-      attackBonus: GRAPPLE_CMB_MARKER,
-      ammo: null,
-      abstract: true,
-      type: GRAPPLE_CMB_ATTACK_TYPE,
-      chatAttack: null,
-    };
-  attack.attackBonusTotal = 0;
-  return attack;
-}
-
-function setGrappleCmbAttackEnabled(dialog, enabled) {
-  if (!dialog || !Array.isArray(dialog.attacks)) return false;
-
-  const existingIndex = dialog.attacks.findIndex((attack) => attack?.type === GRAPPLE_CMB_ATTACK_TYPE);
-  if (enabled) {
-    if (existingIndex !== -1) return false;
-    dialog.attacks.push(createGrappleCmbDialogAttack(dialog));
-    return true;
-  }
-
-  if (existingIndex === -1) return false;
-  if (typeof dialog.attacks.findSplice === "function") {
-    dialog.attacks.findSplice((attack) => attack?.type === GRAPPLE_CMB_ATTACK_TYPE);
-  } else {
-    dialog.attacks.splice(existingIndex, 1);
-  }
-  return true;
-}
-
 function getActionItemType(dialog) {
-  return dialog?.action?.item?.type ?? "";
+  return dialog?.action?.itemType ?? dialog?.action?.item?.type ?? dialog?.action?.item?.data?.type;
 }
 
 function getActionActor(dialog) {
   return dialog?.action?.actor ?? dialog?.action?.item?.actor ?? dialog?.actor ?? null;
 }
 
-function isSpellLikeAbilityItem(dialog) {
-  const item = dialog?.action?.item ?? null;
-  const abilityType = item?.system?.abilityType ?? "";
-  return (abilityType ?? "").toString().toLowerCase() === "sp";
-}
-
-function isMetamagicEligibleAction(dialog) {
-  const type = getActionItemType(dialog);
-  if (type === "spell") return true;
-  return isSpellLikeAbilityItem(dialog);
-}
-
 function getSpellComponents(dialog) {
   return (
     dialog?.action?.components ??
     dialog?.action?.item?.system?.components ??
+    dialog?.action?.item?.data?.components ??
     {}
   );
 }
@@ -158,6 +103,7 @@ function getSpellRangeUnits(dialog) {
   const rawUnits =
     dialog?.action?.range?.units ??
     dialog?.action?.item?.system?.range?.units ??
+    dialog?.action?.item?.data?.range?.units ??
     "";
   const normalized = rawUnits?.toString?.().toLowerCase() ?? "";
   if (normalized) return normalized;
@@ -453,7 +399,6 @@ export function addGrappleCheckbox(dialog, html) {
 
   const labelElement = document.createElement('label');
   labelElement.classList.add('checkbox');
-  labelElement.style.flex = '0 0 auto';
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.name = GRAPPLE_FORM_KEY;
@@ -463,68 +408,43 @@ export function addGrappleCheckbox(dialog, html) {
   }
   input.addEventListener('change', () => {
     DialogStateTracker.set(dialog.appId, GRAPPLE_FORM_KEY, input.checked);
-    const didChangeRows = setGrappleCmbAttackEnabled(dialog, input.checked === true);
-    if (didChangeRows) {
-      dialog.render();
-      return;
-    }
-    dialog.setPosition();
   });
   labelElement.textContent = ` ${labelText} `;
   labelElement.insertBefore(input, labelElement.firstChild);
   container.appendChild(labelElement);
-  const didSyncRows = setGrappleCmbAttackEnabled(dialog, input.checked === true);
-  if (didSyncRows) {
-    dialog.render();
-    return;
-  }
   dialog.setPosition();
 }
 
 export async function addMetamagicCheckbox(dialog, html) {
   if (!(dialog instanceof pf1.applications.AttackDialog)) return;
-  if (!isMetamagicEligibleAction(dialog)) return;
+  if (getActionItemType(dialog) !== "spell") return;
 
   const actor = getActionActor(dialog);
-  const item = dialog?.action?.item ?? null;
   const root = Array.isArray(html) ? html[0] : html?.[0] || html;
   if (!root) return;
   const form = root.querySelector?.('form') ?? root;
   if (!form) return;
 
-  let metamagicSources = [];
-  let checkboxLabel = "Metamagic";
-  if (getActionItemType(dialog) === "spell") {
-    metamagicSources = await getAvailableMetamagicSources(actor, { resolveEnglishNames: false });
-    const invocationSources = await getKineticInvocationSpellMetamagicSources(actor, item);
-    if (invocationSources?.length) {
-      metamagicSources = [...metamagicSources, ...invocationSources];
-      checkboxLabel = "Invocation";
-    }
-  } else if (isSpellLikeAbilityItem(dialog)) {
-    metamagicSources = await getKineticistMetamagicSources(actor, item);
-    checkboxLabel = "Metakinesis";
-  }
+  const metamagicSources = await getAvailableMetamagicSources(actor, { resolveEnglishNames: false });
   const filteredSources = filterMetamagicSourcesForDialog(dialog, metamagicSources);
   if (filteredSources.length) {
-    renderMetamagicControls(dialog, form, filteredSources, { checkboxLabel });
+    renderMetamagicControls(dialog, form, filteredSources);
   }
 
   const isEnglish = (game?.i18n?.lang ?? "en").toLowerCase().startsWith("en");
   const canUseBabele = game?.modules?.get("babele")?.active;
   const shouldResolveEnglishName = !isEnglish && canUseBabele;
-  if (shouldResolveEnglishName && getActionItemType(dialog) === "spell") {
+  if (shouldResolveEnglishName) {
     void refreshMetamagicControls(dialog, form, actor);
   }
 }
 
-function renderMetamagicControls(dialog, form, metamagicSources, options = {}) {
+function renderMetamagicControls(dialog, form, metamagicSources) {
   if (form.querySelector(`input[name="${METAMAGIC_FORM_KEY}"]`)) return;
 
   const container = getFlagsContainer(form);
   const labelElement = document.createElement('label');
   labelElement.classList.add('checkbox');
-  labelElement.style.flex = '0 0 auto';
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.name = METAMAGIC_FORM_KEY;
@@ -532,7 +452,7 @@ function renderMetamagicControls(dialog, form, metamagicSources, options = {}) {
   if (storedChecked !== undefined) {
     input.checked = storedChecked;
   }
-  labelElement.textContent = ` ${(options.checkboxLabel ?? 'Metamagic').toString()} `;
+  labelElement.textContent = ' Metamagic ';
   labelElement.insertBefore(input, labelElement.firstChild);
   container.appendChild(labelElement);
 

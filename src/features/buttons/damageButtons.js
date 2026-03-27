@@ -73,32 +73,25 @@ export function onRenderChatMessage(html) {
         sections.forEach((section, index) => {
             const applyDamageElements = section.querySelectorAll('a.inline-action[data-action="applyDamage"]');
 
-            applyDamageElements.forEach(element => {
-                const tooltip = element.getAttribute('data-tooltip');
-                if (tooltip === 'PF1.ApplyHealing') {
-                    element.setAttribute('data-tooltip', 'PF1.ApplyDamage');
-                }
-            });
+            // Skip sections that have nonlethal damage buttons (they have tooltip PF1.ApplyHealing)
+            // These sections already have their own buttons and should not get healing buttons
+            const hasNonlethalButton = Array.from(applyDamageElements).some(el => 
+                el.getAttribute('data-tooltip') === 'PF1.ApplyHealing'
+            );
+            if (hasNonlethalButton) return;
             
             const heal = document.createElement('div');
             heal.innerHTML = "❤️";
-            const healHalf = document.createElement('div');
-            healHalf.innerHTML = "🩹";
             modifyElementStyles(heal, true);
-            modifyElementStyles(healHalf);
             modifyElementAttributes(heal, "Heal");
-            modifyElementAttributes(healHalf, "Heal Half");
             section.appendChild(heal);
-            section.appendChild(healHalf);
     
             message.addEventListener('mouseenter', () => {
                 heal.style.visibility = "visible";
-                healHalf.style.visibility = "visible";
             });
     
             message.addEventListener('mouseleave', () => {
                 heal.style.visibility = "hidden";
-                healHalf.style.visibility = "hidden";
             });
     
             const isCritical = section.getAttribute('data-damage-type') === 'critical';
@@ -110,18 +103,22 @@ export function onRenderChatMessage(html) {
                     applyHealing(normalDamageInfo, 1);
                 }
             });
-    
-            healHalf.addEventListener('click', () => {
-                if (isCritical) {
-                    applyHealing([...normalDamageInfo, ...criticalDamageInfo], 0.5);
-                } else {
-                    applyHealing(normalDamageInfo, 0.5);
-                }
-            });
         });
     });
 }
 
+function applyNonlethal(damageInfo) {
+    let totalDamage = 0;
+
+    damageInfo.forEach(({ totalDamage: dmg }) => {
+        totalDamage += dmg;
+    });
+
+    if (totalDamage > 0) {
+        const originalApplyDamage = pf1.documents.actor.ActorPF.applyDamage;
+        originalApplyDamage(totalDamage, { asNonLethal: true });
+    }
+}
 
 function applyHealing(damageInfo, multiplier) {
     let healDamage = 0;

@@ -1,5 +1,5 @@
 import { MODULE } from '../common/module.js';
-import { CONCEALED_CONDITION_ID, actorHasBlindFight, getConcealedVariant } from '../features/automation/conditions/concealed/concealed.js';
+import { CONCEALMENT_CONDITION_ID, actorHasBlindFight, getConcealmentState } from '../features/automation/conditions/concealment/concealment.js';
 
 export function registerConditionFootnoteWrapper(isGrappleSelected) {
   if (!game.modules.get("lib-wrapper")?.active) {
@@ -32,8 +32,12 @@ export function registerConditionFootnoteWrapper(isGrappleSelected) {
           for (const target of this.shared.targets) {
             const actor = target?.actor;
             if (!actor) continue;
-            if (!actor.statuses?.has?.(CONCEALED_CONDITION_ID)) continue;
-            const variant = getConcealedVariant(actor) || "normal";
+            if (!actor.statuses?.has?.(CONCEALMENT_CONDITION_ID)) continue;
+            const state = getConcealmentState(actor) || {};
+            const hasTotal = actor.items.some(i => i.type === "buff" && i.name === "Concealment (Total)" && i.system?.active);
+            const hasNormal = actor.items.some(i => i.type === "buff" && i.name === "Concealment" && i.system?.active);
+            if (!hasTotal && !hasNormal) continue; 
+            const variant = state.variant || (hasTotal ? "total" : "normal");
             const targetData = { variant };
             chosen = (!chosen || chosen.variant === "normal" && variant === "total") ? targetData : chosen;
             if (chosen.variant === "total") break; 
@@ -47,9 +51,9 @@ export function registerConditionFootnoteWrapper(isGrappleSelected) {
             const roll = hasBF ? "[[2d100kh]]" : "[[1d100]]";
             const threshold = chosen.variant === "total" ? 50 : 20;
             const variantLabel = chosen.variant === "total"
-              ? game.i18n.localize('NAS.conditions.main.ConcealedTotal')
-              : game.i18n.localize('NAS.conditions.main.ConcealedNormal');
-            const text = game.i18n.format('NAS.conditions.main.ConcealedFootnote', {
+              ? game.i18n.localize('NAS.conditions.main.ConcealmentTotal')
+              : game.i18n.localize('NAS.conditions.main.ConcealmentNormal');
+            const text = game.i18n.format('NAS.conditions.main.ConcealmentFootnote', {
               variant: variantLabel,
               roll,
               threshold
@@ -61,7 +65,7 @@ export function registerConditionFootnoteWrapper(isGrappleSelected) {
           }
         }
       } catch (err) {
-        console.error(`${MODULE.ID} | Failed to append condition footnote`, err);
+        console.error(`${MODULE.ID} | Failed to append grapple footnote`, err);
       }
     },
     "WRAPPER"

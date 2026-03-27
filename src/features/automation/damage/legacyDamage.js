@@ -48,9 +48,6 @@ export function registerLegacyDamageOverride() {
 
     libWrapper.register(MODULE.ID, "pf1.documents.actor.ActorPF.prototype.applyDamage", applyDamage, libWrapper.WRAPPER);
     function applyDamage(wrapped, value, config) {
-        if (!game.settings.get(MODULE.ID, "enableDamageAutomation")) {
-            return wrapped(value, config);
-        }
         if (config._nasDamageDialog) return wrapped(value, config);
         const hasSelectedTokens = canvas.tokens.controlled.length > 0;
         const isClusteredShots = config.flags?.[MODULE.ID]?.clusteredShots != null;

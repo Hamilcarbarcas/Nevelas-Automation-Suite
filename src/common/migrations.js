@@ -518,80 +518,6 @@ async function migrateTranslationsFromLegacy(legacyId, newId, { force } = {}) {
   }
 }
 
-async function migrateConcealmentConditionToConcealed(progress) {
-  const fromId = "concealment";
-  const toId = "concealed";
-  const oldImg = `modules/${MODULE.ID}/src/icons/concealment.png`;
-  const newImg = `modules/${MODULE.ID}/src/icons/concealed.png`;
-  const flagKey = "concealedVariant";
-
-  // Best-effort; only run when Foundry is ready enough to access actors.
-  for (const actor of game.actors ?? []) {
-    try {
-      // If this actor has no legacy concealment statuses/effects, skip quickly.
-      const hasLegacyStatus = actor.statuses?.has?.(fromId);
-      const hasLegacyFlag = actor.getFlag?.(MODULE.ID, "concealmentState") != null;
-      if (!hasLegacyStatus && !hasLegacyFlag) {
-        if (progress) await progress.increment(`Actor: ${actor.name ?? actor.id}`);
-        continue;
-      }
-
-      // Determine variant (prefer stored state, fallback to active buff presence).
-      let variant = null;
-      const state = actor.getFlag?.(MODULE.ID, "concealmentState");
-      if (state?.variant === "total" || state?.variant === "normal") {
-        variant = state.variant;
-      } else {
-        const hasTotal = actor.items?.some?.(i => i.type === "buff" && i.name === "Concealment (Total)" && i.system?.active);
-        const hasNormal = actor.items?.some?.(i => i.type === "buff" && i.name === "Concealment" && i.system?.active);
-        variant = hasTotal ? "total" : (hasNormal ? "normal" : null);
-      }
-
-      const effectUpdates = [];
-      for (const ae of actor.effects ?? []) {
-        const statuses = Array.from(ae.statuses ?? []);
-        if (!statuses.includes(fromId)) continue;
-
-        const nextStatuses = statuses.map((s) => (s === fromId ? toId : s));
-        const update = { _id: ae.id, statuses: nextStatuses };
-        update[`flags.${MODULE.ID}.${flagKey}`] = variant ?? "normal";
-
-        if (ae.img === oldImg) update.img = newImg;
-        if (typeof ae.name === "string" && ae.name.trim().toLowerCase() === "concealment") {
-          update.name = variant === "total" ? "Concealed (Total)" : "Concealed";
-        }
-
-        effectUpdates.push(update);
-      }
-      if (effectUpdates.length > 0) {
-        await actor.updateEmbeddedDocuments("ActiveEffect", effectUpdates);
-      }
-
-      // Deactivate any managed concealment buff items created by older NAS versions.
-      const buffUpdates = [];
-      for (const item of actor.items ?? []) {
-        if (item.type !== "buff") continue;
-        if (!item.system?.active) continue;
-        const managed = item.getFlag?.(MODULE.ID, "concealmentManaged");
-        if (!managed) continue;
-        buffUpdates.push({ _id: item.id, "system.active": false });
-      }
-      if (buffUpdates.length > 0) {
-        await actor.updateEmbeddedDocuments("Item", buffUpdates);
-      }
-
-      // Remove legacy actor flag state
-      if (hasLegacyFlag) {
-        await actor.unsetFlag(MODULE.ID, "concealmentState");
-      }
-    } catch (err) {
-      console.warn(`${MODULE.ID} | Migration | Failed to migrate concealment on actor`, actor?.id, err);
-    }
-
-    if (progress) await progress.increment(`Actor: ${actor.name ?? actor.id}`);
-  }
-}
-
 export async function runSuiteMigrations({ force = false } = {}) {
   const moduleVersion = game.modules?.get?.(MODULE.ID)?.version
     ?? game.modules?.get?.(MODULE.ID)?.data?.version
@@ -639,7 +565,6 @@ export async function runSuiteMigrations({ force = false } = {}) {
     await migrateCollectionFlags(game.combats, [MODULE.LEGACY_IC], MODULE.ID, progress, combat => `Combat: ${combat.name ?? combat.id}`);
     await migrateSceneTokens(legacyIds, MODULE.ID, progress);
     await migrateTokenActorItems(legacyIds, MODULE.ID, progress);
-    await migrateConcealmentConditionToConcealed(progress);
 
     progress?.update({ detail: "Finalizing migration..." });
 

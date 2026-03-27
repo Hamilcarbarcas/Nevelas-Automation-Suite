@@ -1,75 +1,4 @@
 import { MODULE } from '../../common/module.js';
-import { resolveEnglishName } from '../automation/utils/compendiumNameResolver.js';
-
-const CLUSTERED_SHOTS_COMPENDIUM_SOURCE = "Compendium.pf-content.pf-feats.Item.6b29HYy9MgWVO7oW";
-const CLUSTERED_SHOTS_ENGLISH_NAME = "Clustered Shots";
-
-function t(key) {
-    return game?.i18n?.localize?.(key) ?? key;
-}
-
-function tf(key, data) {
-    return game?.i18n?.format?.(key, data) ?? t(key);
-}
-
-function isEnglishLanguage() {
-    return (game?.i18n?.lang ?? "en").toLowerCase().startsWith("en");
-}
-
-function isFeatItem(item) {
-    // PF1 sometimes exposes subtype on item.subType; some data has it under item.system.subType.
-    const subType = item?.subType ?? item?.system?.subType;
-    return item?.type === "feat" && subType === "feat";
-}
-
-function getBabeleOriginalName(item) {
-    const direct = item?.flags?.babele?.originalName;
-    const canUseBabele = game?.modules?.get?.("babele")?.active === true;
-    const hasGetFlag = canUseBabele && typeof item?.getFlag === "function";
-
-    let viaGetFlag = null;
-    try {
-        viaGetFlag = hasGetFlag ? item.getFlag("babele", "originalName") : null;
-    } catch (_err) {
-        viaGetFlag = null;
-    }
-
-    return direct ?? viaGetFlag ?? null;
-}
-
-function getClusteredShotsFastMatchReason(feat) {
-    const source = feat?._stats?.compendiumSource ?? "";
-    if (source && source === CLUSTERED_SHOTS_COMPENDIUM_SOURCE) return "compendiumSource";
-
-    const originalName = getBabeleOriginalName(feat);
-    if (originalName && originalName === CLUSTERED_SHOTS_ENGLISH_NAME) return "babele.originalName";
-
-    if (isEnglishLanguage() && (feat?.name ?? "") === CLUSTERED_SHOTS_ENGLISH_NAME) return "name";
-    return null;
-}
-
-async function actorHasClusteredShots(actor) {
-    const items = actor?.items;
-    if (!items) return false;
-
-    const feats = Array.from(items).filter(isFeatItem);
-    if (!feats.length) return false;
-
-    // Prefer stable/fast identifiers
-    for (const feat of feats) {
-        const reason = getClusteredShotsFastMatchReason(feat);
-        if (!reason) continue;
-        return true;
-    }
-
-    // Fallback: resolve localized name → English (cached, deepScan off)
-    if (isEnglishLanguage()) return false;
-    for (const feat of feats) {
-        const resolved = await resolveEnglishName(feat?.name, { documentName: "Item", deepScanMode: "off" });
-        if ((resolved ?? "") === CLUSTERED_SHOTS_ENGLISH_NAME) return true;
-    }
-    return false;
-}
 
 export async function addClusteredShotsButton(html) {
     const root = (typeof jQuery !== 'undefined' && html instanceof jQuery) ? html[0] : html;
@@ -88,11 +17,8 @@ export async function addClusteredShotsButton(html) {
                     let action = undefined;
                     if (item && item.actions && typeof item.actions.get === 'function' && actionId) {
                         action = item.actions.get(actionId);
-                        if (item?.type === "weapon" && action && action.isRanged) {
-                            const hasFeat = await actorHasClusteredShots(token?.actor);
-                            if (hasFeat) {
-                                shouldAddButton = true;
-                            }
+                        if (action && action.isRanged) {
+                            shouldAddButton = true;
                         }
                     }
                 } catch (e) {
@@ -154,13 +80,13 @@ export async function addClusteredShotsButton(html) {
             normalLabel.style.cursor = 'pointer';
             normalLabel.style.color = 'white';
             normalLabel.style.fontSize = '12px';
-            normalLabel.textContent = t('NAS.clusteredShots.labels.normal');
+            normalLabel.textContent = 'Normal';
             
             const normalContainer = document.createElement('div');
             normalContainer.appendChild(normalCheckbox);
             normalContainer.appendChild(normalLabel);
             
-            checkboxContainer.setAttribute('data-tooltip', t('NAS.clusteredShots.tooltips.include'));
+            checkboxContainer.setAttribute('data-tooltip', 'Include in Clustered Shots');
             
             checkboxContainer.appendChild(normalContainer);
             
@@ -180,7 +106,7 @@ export async function addClusteredShotsButton(html) {
                 criticalLabel.style.cursor = 'pointer';
                 criticalLabel.style.color = 'white';
                 criticalLabel.style.fontSize = '12px';
-                criticalLabel.textContent = t('NAS.clusteredShots.labels.critical');
+                criticalLabel.textContent = 'Critical';
                 
                 const criticalContainer = document.createElement('div');
                 criticalContainer.appendChild(criticalCheckbox);
@@ -219,8 +145,8 @@ export async function addClusteredShotsButton(html) {
         const topButton = document.createElement('div');
         const bottomButton = document.createElement('div');
         
-        topButton.innerHTML = t('NAS.clusteredShots.buttonLabel');
-        bottomButton.innerHTML = t('NAS.clusteredShots.buttonLabel');
+        topButton.innerHTML = "🎯 Clustered Shots 🎯";
+        bottomButton.innerHTML = "🎯 Clustered Shots 🎯";
         
         styleClusteredShotButton(topButton);
         styleClusteredShotButton(bottomButton);
@@ -233,8 +159,8 @@ export async function addClusteredShotsButton(html) {
             button.dataset.clusteredShots = "true"; 
         });
         
-        topButton.setAttribute("data-tooltip", t('NAS.clusteredShots.tooltips.applyBeforeDr'));
-        bottomButton.setAttribute("data-tooltip", t('NAS.clusteredShots.tooltips.applyBeforeDr'));
+        topButton.setAttribute("data-tooltip", "Apply damage before DR (Clustered Shots)");
+        bottomButton.setAttribute("data-tooltip", "Apply damage before DR (Clustered Shots)");
         
         const firstAttack = chatAttacks[0];
         const lastAttack = chatAttacks[chatAttacks.length - 1];
@@ -255,7 +181,7 @@ async function applyClusteredShots(card, button, event) {
     const messageId = chatMessage ? chatMessage.getAttribute('data-message-id') : null;
     
     if (!messageId) {
-        ui.notifications.error(t('NAS.clusteredShots.errors.noMessageId'));
+        ui.notifications.error("Could not find message ID.");
         return;
     }
     
@@ -263,14 +189,14 @@ async function applyClusteredShots(card, button, event) {
     
     const chatAttacks = card.querySelectorAll('.chat-attack');
     if (!chatAttacks.length) {
-        ui.notifications.warn(t('NAS.clusteredShots.warnings.noAttacksFound'));
+        ui.notifications.warn("No attacks found in this message.");
         return;
     }
     
     const messageObject = game.messages.get(messageId);
     
     if (!messageObject) {
-        ui.notifications.error(t('NAS.clusteredShots.errors.noMessageData'));
+        ui.notifications.error("Could not find message data.");
         return;
     }
     
@@ -281,7 +207,7 @@ async function applyClusteredShots(card, button, event) {
     });
     
     if (!anyAttackSelected) {
-        ui.notifications.warn(t('NAS.clusteredShots.warnings.noAttacksSelected'));
+        ui.notifications.warn("No attacks selected for Clustered Shots. Please check at least one attack to include.");
         return;
     }
     
@@ -445,7 +371,7 @@ async function applyClusteredShots(card, button, event) {
     const damageTypes = new Set(instances.flatMap((inst) => inst.types || []));
 
     if (!Number.isFinite(totalDamage) || totalDamage <= 0) {
-        ui.notifications.warn(t('NAS.clusteredShots.warnings.noDamageFound'));
+        ui.notifications.warn("Clustered Shots found no damage to apply.");
         return;
     }
 
@@ -471,13 +397,13 @@ async function applyClusteredShots(card, button, event) {
 
     const applyDamage = pf1?.documents?.actor?.ActorPF?.applyDamage;
     if (typeof applyDamage !== 'function') {
-        ui.notifications.error(t('NAS.clusteredShots.errors.applyDamageUnavailable'));
+        ui.notifications.error("ApplyDamage is not available.");
         return;
     }
 
     const targets = canvas.tokens.controlled;
     if (!targets?.length && !game.user.character) {
-        ui.notifications.warn(t('NAS.clusteredShots.warnings.selectTargets'));
+        ui.notifications.warn("Please select at least one token to apply damage to.");
         return;
     }
 
@@ -506,7 +432,7 @@ async function applyClusteredShots(card, button, event) {
         }
     });
 
-    ui.notifications.info(tf('NAS.clusteredShots.info.applied', { totalDamage, targets: targets?.length || 1 }));
+    ui.notifications.info(`Applied ${totalDamage} points of Clustered Shots damage to ${targets?.length || 1} targets.`);
 }
 
 function styleClusteredShotButton(button) {

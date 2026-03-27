@@ -16,6 +16,9 @@ export function onRenderChatMessage(html) {
 function addInlineExtras(root) {
     const originals = root.querySelectorAll(`a.inline-action[data-action="applyDamage"]:not([${MARK_ATTR}])`);
     for (const orig of originals) {
+        // Skip buttons that are already nonlethal (have PF1.ApplyHealing tooltip)
+        if (orig.dataset.tooltip === 'PF1.ApplyHealing') continue;
+        
         const kind = isHalfInline(orig) ? "half" : "apply";
         if (isNextExtra(orig, kind)) continue;
 
@@ -32,6 +35,10 @@ function addSimpleDamageExtras(root) {
 
         const applyOrig = originals[0];
         const halfOrig = originals[1];
+
+        // Skip if these are nonlethal buttons (have PF1.ApplyHealing tooltip)
+        if (applyOrig?.dataset?.tooltip === 'PF1.ApplyHealing') continue;
+        if (halfOrig?.dataset?.tooltip === 'PF1.ApplyHealing') continue;
 
         if (!isNextExtra(applyOrig, "apply")) {
             const extraApply = createHealingClone(applyOrig, "apply");

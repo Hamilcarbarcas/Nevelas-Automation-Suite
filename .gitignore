@@ -1,6 +1,7 @@
-
-*.zip
-packs/**/LOCK
+packs/**/*.ldb
+packs/**/*.log
 packs/**/LOG
 packs/**/LOG.old
-packs/**/*.log
+packs/**/LOCK
+packs/**/MANIFEST-*
+packs/**/lost/

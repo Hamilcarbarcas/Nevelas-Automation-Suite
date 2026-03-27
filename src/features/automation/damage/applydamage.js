@@ -183,7 +183,7 @@ export function customApplyDamage(originalApplyDamage, value, config, targetInfo
             });
         };
         
-        originalApplyDamage(totalDamage, config);
+        return originalApplyDamage(totalDamage, config);
     });
     
     Object.keys(targetInfo).forEach(key => delete targetInfo[key]);

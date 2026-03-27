@@ -24,22 +24,6 @@ export async function handleBuffAutomation(action) {
       }
     }
   }
-
-  const stripModifierLiteral = (name, rawModifier) => {
-    const mod = (rawModifier ?? "").trim();
-    if (!mod) return { value: name, matched: false };
-    const n = (name ?? "").trim();
-    const nLower = n.toLowerCase();
-    const mLower = mod.toLowerCase();
-
-    if (nLower.startsWith(mLower)) {
-      return { value: n.slice(mod.length).trim(), matched: true };
-    }
-    if (nLower.endsWith(mLower)) {
-      return { value: n.slice(0, Math.max(0, n.length - mod.length)).trim(), matched: true };
-    }
-    return { value: name, matched: false };
-  };
   
   const modifierNames = game.settings.get(MODULE.ID, 'modifierNames') || {};
   const communalString = modifierNames.communal || 'Communal';
@@ -54,13 +38,6 @@ export async function handleBuffAutomation(action) {
     isCommunal = true;
     searchName = searchName.replace(communalEndRegex, '').trim();
     searchName = searchName.replace(/[\s,]+$/, '').trim();
-  }
-
-  const massString = modifierNames.mass || "Mass";
-  const strippedMass = stripModifierLiteral(searchName, massString);
-  if (strippedMass.matched) {
-    searchName = strippedMass.value;
-    console.log(`${MODULE.ID} | Detected mass modifier "${massString}". Stripped name: ${searchName}`);
   }
   
   const hasTargets = action.shared.targets && action.shared.targets.length > 0;
@@ -156,10 +133,7 @@ export async function handleBuffAutomation(action) {
         communalPromptForManual,
         isAreaOfEffect
       });
-      if (targetContext.rejected) {
-        notifyBuffTargetingRejection(action, targetContext.reason);
-        return;
-      }
+      if (targetContext.rejected) return;
 
       const variantPlan = await promptBuffSelection(categorizedMatches.variants, action, {
         mode: 'variant',
@@ -218,10 +192,7 @@ export async function handleBuffAutomation(action) {
         communalPromptForManual,
         isAreaOfEffect
       });
-      if (targetContext.rejected) {
-        notifyBuffTargetingRejection(action, targetContext.reason);
-        return;
-      }
+      if (targetContext.rejected) return;
 
       const { filteredTargets, perTargetDurations } = targetContext;
 
@@ -416,7 +387,6 @@ async function gatherTargetsForApplication({
   const filteringMode = game.settings.get(MODULE.ID, 'buffTargetFiltering');
   const personalTargeting = game.settings.get(MODULE.ID, 'personalTargeting');
   let perTargetDurations = null;
-  let rejectionReason = null;
 
   if (filteringMode === "byDisposition") {
     if (isSelfTargeting) {
@@ -433,15 +403,11 @@ async function gatherTargetsForApplication({
         }
       }
     } else {
-      const hadInitialTargets = Array.isArray(filteredTargets) && filteredTargets.length > 0;
       filteredTargets = filteredTargets.filter(target => {
         const targetDisposition = target.document ? target.document.disposition : target.disposition;
         const actionDisposition = action.token.disposition;
         return targetDisposition === actionDisposition;
       });
-      if (hadInitialTargets && (!filteredTargets || filteredTargets.length === 0)) {
-        rejectionReason = "dispositionFilteredAllTargets";
-      }
       if (isCommunal) {
         perTargetDurations = await handleCommunalDuration({
           isCommunal,
@@ -453,7 +419,7 @@ async function gatherTargetsForApplication({
           communalDurationUnit,
           action
         });
-        if (!perTargetDurations) return { rejected: true, reason: "communalDurationCancelled" };
+        if (!perTargetDurations) return { rejected: true };
       }
     }
   } else if (filteringMode === "manualSelection") {
@@ -495,12 +461,9 @@ async function gatherTargetsForApplication({
             communalDurationUnit,
             action
           });
-          if (!perTargetDurations) return { rejected: true, reason: "communalDurationCancelled" };
+          if (!perTargetDurations) return { rejected: true };
         } else {
           filteredTargets = await promptTargetSelection(filteredTargets, action);
-          if ((!filteredTargets || filteredTargets.length === 0) && game.settings.get(MODULE.ID, 'buffAutomationMode') === "strict") {
-            return { rejected: true, reason: "manualSelectionCancelled" };
-          }
         }
       }
     }
@@ -525,14 +488,14 @@ async function gatherTargetsForApplication({
           communalDurationUnit,
           action
         });
-        if (!perTargetDurations) return { rejected: true, reason: "communalDurationCancelled" };
+        if (!perTargetDurations) return { rejected: true };
       }
     }
   }
 
   if ((!filteredTargets || filteredTargets.length === 0) && game.settings.get(MODULE.ID, 'buffAutomationMode') === "strict") {
     action.shared.reject = true;
-    return { rejected: true, reason: rejectionReason || "noTargetsStrict" };
+    return { rejected: true };
   }
 
   const slotInfo = checkAndConsumeSpellSlots({
@@ -541,24 +504,9 @@ async function gatherTargetsForApplication({
     isCommunal,
     isAreaOfEffect
   });
-  if (slotInfo && slotInfo.rejected) return { rejected: true, reason: "spellSlots" };
+  if (slotInfo && slotInfo.rejected) return { rejected: true };
 
   return { filteredTargets, perTargetDurations, slotInfo, rejected: false };
-}
-
-function notifyBuffTargetingRejection(action, reason) {
-  if (!action) return;
-  if (reason === "spellSlots") return; // Already handled with a dedicated warning in checkAndConsumeSpellSlots.
-
-  const map = {
-    noTargetsStrict: "NAS.buffs.TargetingRejectedNoTargetsStrict",
-    dispositionFilteredAllTargets: "NAS.buffs.TargetingRejectedDisposition",
-    manualSelectionCancelled: "NAS.buffs.TargetingRejectedManualSelection",
-    communalDurationCancelled: "NAS.buffs.TargetingRejectedCommunalSelection",
-  };
-
-  const messageKey = map[reason] || "NAS.buffs.TargetingRejectedUnknown";
-  ui.notifications.warn(game.i18n.format(messageKey, { name: action.item?.name ?? "" }));
 }
 
 export async function promptBuffSelection(buffs, action, options = {}) {

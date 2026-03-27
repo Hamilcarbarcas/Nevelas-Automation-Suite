@@ -1,13 +1,7 @@
 import { MODULE } from '../../../../common/module.js';
-import {
-  GRAPPLE_CMB_ATTACK_TYPE,
-  GRAPPLE_CMB_MARKER,
-  GRAPPLE_FORM_KEY,
-} from '../../utils/attackDialogControls.js';
-import { socket } from '../../../../integration/moduleSockets.js';
+import { GRAPPLE_FORM_KEY } from '../../utils/attackDialogControls.js';
 
 const GRAPPLE_FLAG_KEY = "grappleContext";
-export { GRAPPLE_CMB_ATTACK_TYPE, GRAPPLE_CMB_MARKER };
 
 export function isGrappleSelected(action) {
   return action?.formData?.[GRAPPLE_FORM_KEY] ?? action?.shared?.formData?.[GRAPPLE_FORM_KEY];
@@ -21,26 +15,6 @@ function getPrimaryTarget(action) {
 function getPrimaryAttackTotal(action) {
   const chatAttack = action?.shared?.chatAttacks?.[0];
   return chatAttack?.attack?.total ?? null;
-}
-
-function getGrappleCmbAttackTotal(action) {
-  const attacks = action?.shared?.attacks ?? [];
-  const cmbAttack = attacks.find((atk) => atk?.type === GRAPPLE_CMB_ATTACK_TYPE);
-  return cmbAttack?.chatAttack?.attack?.total ?? null;
-}
-
-export function isGrappleCmbAttack(attackLike) {
-  return attackLike?.type === GRAPPLE_CMB_ATTACK_TYPE;
-}
-
-export function createGrappleCmbAttackEntry() {
-  const cmbLabel = game.i18n.localize("PF1.CMBAbbr");
-  const grappleLabel = game.i18n.localize("NAS.conditions.main.GrappleCheckbox");
-  return {
-    type: GRAPPLE_CMB_ATTACK_TYPE,
-    label: `${cmbLabel} (${grappleLabel})`,
-    attackBonus: GRAPPLE_CMB_MARKER,
-  };
 }
 
 function getTokenCmd(targetToken) {
@@ -70,7 +44,7 @@ export async function handleGrappleResolution(action) {
     return;
   }
 
-  const attackTotal = getGrappleCmbAttackTotal(action) ?? getPrimaryAttackTotal(action);
+  const attackTotal = getPrimaryAttackTotal(action);
   if (attackTotal === null || attackTotal === undefined) return;
 
   const cmdValue = getTokenCmd(targetToken);
@@ -79,20 +53,9 @@ export async function handleGrappleResolution(action) {
   if (attackTotal > cmdValue) {
     const targetActor = targetToken.actor;
     const attackerActor = action.token?.actor ?? action.actor;
-    if (targetActor?.isOwner || game.user?.isGM) {
-      await targetActor?.setCondition("grappled", true);
-      await storeGrappleFlag(targetActor, attackerActor, attackTotal, cmdValue);
-    } else if (socket && targetToken?.document?.uuid) {
-      await socket.executeAsGM(
-        "applyGrappleToTarget",
-        targetToken.document.uuid,
-        attackerActor?.uuid ?? null,
-        attackTotal,
-        cmdValue
-      );
-    }
-
+    await targetActor?.setCondition("grappled", true);
     await attackerActor?.setCondition("grappling", true);
+    await storeGrappleFlag(targetActor, attackerActor, attackTotal, cmdValue);
   }
 }
 

@@ -2,7 +2,7 @@
   "id": "nevelas-automation-suite",
   "title": "Nevela's Automation Suite",
   "description": "Combined bundle of PF1 Automate Damage and PF1 Improved Conditions.",
-  "version": "1.0.3",
+  "version": "1.0.1",
   "compatibility": {
     "minimum": "12",
     "verified": "13.344"

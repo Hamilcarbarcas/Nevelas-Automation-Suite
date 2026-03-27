@@ -17,123 +17,9 @@ export function initializeSockets() {
     socket.register("applyImmobilize", applyImmobilize);
     socket.register("sendNotification", sendNotification);
     socket.register("promptHTKChoice", promptHTKChoice);
-    socket.register("promptHTKUseFeature", promptHTKUseFeature);
-    socket.register("useHtkItem", useHtkItem);
-    socket.register("postHtkItemCard", postHtkItemCard);
-    socket.register("applyGrappleToTarget", applyGrappleToTarget);
     socket.register("handleFlatFootedRemoval", handleFlatFootedRemoval);
     socket.register("applyBuffToTargetsSocket", applyBuffToTargetsSocket);
 }
-
-function getHtkWhisperTargets() {
-    const gmIds = (game.users?.filter?.((u) => u?.isGM)?.map?.((u) => u.id) ?? []).filter(Boolean);
-    const base = game.user?.isGM ? gmIds : [game.user.id, ...gmIds];
-    return Array.from(new Set(base.filter(Boolean)));
-}
-
-async function resolveTokenContext(tokenUuid) {
-    if (!tokenUuid || typeof tokenUuid !== "string" || typeof fromUuid !== "function") {
-        return { token: null, tokenDocument: null, tokenActor: null };
-    }
-
-    let tokenDoc = null;
-    try {
-        tokenDoc = await fromUuid(tokenUuid);
-    } catch (_err) {
-        tokenDoc = null;
-    }
-
-    const token =
-        tokenDoc?.object ??
-        (tokenDoc?.id ? canvas?.tokens?.get?.(tokenDoc.id) : null) ??
-        null;
-    const tokenDocument = tokenDoc ?? token?.document ?? null;
-    const tokenActor = token?.actor ?? tokenDoc?.actor ?? null;
-
-    return { token, tokenDocument, tokenActor };
-}
-
-async function resolveTokenOwnedItem(itemUuid, tokenActor) {
-    if (!itemUuid || typeof itemUuid !== "string" || typeof fromUuid !== "function") return null;
-    let item = null;
-    try {
-        item = await fromUuid(itemUuid);
-    } catch (_err) {
-        item = null;
-    }
-    if (!item) return null;
-    if (!tokenActor) return item;
-
-    if (item.actor && item.actor.uuid !== tokenActor.uuid) {
-        const tokenItem = tokenActor.items?.get?.(item.id) ?? tokenActor.items?.find?.((i) => i.id === item.id) ?? null;
-        if (tokenItem) return tokenItem;
-    }
-
-    return item;
-}
-
-async function postHtkItemCard(actorId, itemUuid, tokenUuid = null) {
-    if (!actorId || !itemUuid) return false;
-    const whisper = getHtkWhisperTargets();
-
-    const { tokenDocument, tokenActor } = await resolveTokenContext(tokenUuid);
-    const baseActor = game.actors.get(actorId) ?? null;
-    const actor = tokenActor ?? baseActor;
-    if (!actor) return false;
-
-    const item = await resolveTokenOwnedItem(itemUuid, tokenActor);
-    if (!item) return false;
-
-    if (item.actor?.id && item.actor.id !== actor.id) return false;
-    if (item.actor?.uuid && actor.uuid && item.actor.uuid !== actor.uuid) return false;
-
-    try {
-        await item.displayCard?.({ whisper, rollMode: "gmroll" }, { token: tokenDocument });
-        return true;
-    } catch (_err) {
-        return false;
-    }
-}
-
-async function applyGrappleToTarget(targetTokenUuid, attackerActorUuid, attackTotal, cmdValue) {
-    if (!targetTokenUuid || typeof fromUuid !== "function") return false;
-    let tokenDoc = null;
-    try {
-        tokenDoc = await fromUuid(targetTokenUuid);
-    } catch (_err) {
-        tokenDoc = null;
-    }
-    const token = tokenDoc?.object ?? (tokenDoc?.id ? canvas?.tokens?.get?.(tokenDoc.id) : null) ?? null;
-    const targetActor = token?.actor ?? tokenDoc?.actor ?? null;
-    if (!targetActor) return false;
-
-    await targetActor.setCondition?.("grappled", true);
-
-    await targetActor.setFlag(MODULE.ID, "grappleContext", {
-        attacker: attackerActorUuid ?? null,
-        attackTotal,
-        cmd: cmdValue,
-        timestamp: Date.now(),
-    });
-
-    return true;
-}
-
-export function getPreferredOwnerUserId(actor) {
-    if (!actor) return null;
-    try {
-        const ownerUsers = game.users.filter(u => actor.testUserPermission(u, 'OWNER'));
-        const nonGMOwners = ownerUsers.filter(u => !u.isGM && u.active);
-        if (nonGMOwners.length > 0) return nonGMOwners[0].id;
-        const activeOwners = ownerUsers.filter(u => u.active);
-        if (activeOwners.length > 0) return activeOwners[0].id;
-    } catch (_err) {
-        // ignore
-    }
-    const activeGm = game.users.find(u => u.active && u.isGM);
-    return activeGm?.id ?? null;
-}
-
 
 async function rollMassiveDamageSave(actorId, damageAmount, threshold) {
     const actor = game.actors.get(actorId);
@@ -230,7 +116,7 @@ export function checkMassiveDamage(damage, maxHP, token) {
 let immobileConditionIds = new Set();
 
 export function initializeConditionIds() {
-    const immobileConditions = ["anchored", "cowering", "dazed", "grappled", "helpless", "paralyzed", "petrified", "pinned"];
+    const immobileConditions = ["anchored", "cowering", "dazed", "dying", "grappled", "helpless", "paralyzed", "petrified", "pinned"];
 
     pf1.registry.conditions.forEach(condition => {
         if (immobileConditions.includes(condition._id)) {
@@ -286,57 +172,6 @@ async function promptHTKChoice(actorId) {
     });
 
     return choice;
-}
-
-async function promptHTKUseFeature(actorId, titleKey, bodyKey, bodyData = {}) {
-    const actor = game.actors.get(actorId);
-    if (!actor) return false;
-
-    const title = game.i18n.localize(titleKey);
-    const content = `<p>${game.i18n.format(bodyKey, { name: actor.name, ...bodyData })}</p>`;
-
-    const yes = game.i18n.localize('NAS.conditions.sockets.UseFeatureYes');
-    const no = game.i18n.localize('NAS.conditions.sockets.UseFeatureNo');
-
-    const choice = await new Promise(resolve => {
-        new Dialog({
-            title,
-            content,
-            buttons: {
-                yes: { label: yes, callback: () => resolve(true) },
-                no: { label: no, callback: () => resolve(false) }
-            },
-            default: "yes"
-        }).render(true);
-    });
-    return Boolean(choice);
-}
-
-async function useHtkItem(actorId, itemUuid, tokenUuid = null) {
-    if (!actorId || !itemUuid) return false;
-    if (typeof fromUuid !== "function") return false;
-
-    const whisper = getHtkWhisperTargets();
-    const { tokenDocument, tokenActor } = await resolveTokenContext(tokenUuid);
-
-    const baseActor = game.actors.get(actorId) ?? null;
-    const actor = tokenActor ?? baseActor;
-    if (!actor) return false;
-
-    let item = await resolveTokenOwnedItem(itemUuid, tokenActor);
-    if (!item) return false;
-
-    if (item.actor?.id && item.actor.id !== actor.id) return false;
-    if (item.actor?.uuid && actor.uuid && item.actor.uuid !== actor.uuid) return false;
-
-    try {
-        await item.use?.({ skipDialog: true, chatMessage: false, token: tokenDocument });
-
-        await item.displayCard?.({ whisper, rollMode: "gmroll" }, { token: tokenDocument });
-        return true;
-    } catch (_err) {
-        return false;
-    }
 }
 
 let updatingToken = false;

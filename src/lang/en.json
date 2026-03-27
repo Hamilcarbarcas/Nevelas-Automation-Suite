@@ -4,14 +4,6 @@
       "blocked": "Nevela's Automation Suite is incompatible with the legacy module(s) {legacyList}. These modules are no longer supported. Disable them to use Nevela's Automation Suite. (The legacy migration tool remains available.)"
     },
     "settings": {
-      "enableDamageAutomation": {
-        "name": "Enable Damage Automation",
-        "hint": "When disabled, Nevela's Automation Suite will not modify PF1 damage application behavior (it will pass through to the system)."
-      },
-      "enableMetamagicAutomation": {
-        "name": "Enable Metamagic Automation",
-        "hint": "When disabled, Nevela's Automation Suite will not add metamagic UI or automation (e.g. persistent/dazing save workflow, empower tooltip overrides)."
-      },
       "damageTypePriority": {
         "name": "Custom Damage Type Priority",
         "hint": "Add custom damage types to be counted as damage reduction types. Magic is at least 1, Cold Iron and Silver types are 3, Adamantine is 4 and Alignments are 5 by default."
@@ -50,22 +42,6 @@
       "saveRollTokenInteraction": {
         "name": "Save Roll Token Interaction",
         "hint": "Add a clickable token image to saving throw roll messages."
-      },
-      "skipSurprisedTokens": {
-        "name": "Skip Surprised Tokens",
-        "hint": "Enable to automatically skip combatants marked as Surprised during the surprise round."
-      }
-    },
-    "combat": {
-      "buttons": {
-        "surpriseRound": {
-          "name": "Surprise Round",
-          "tooltip": "Start a surprise round"
-        },
-        "surprised": {
-          "name": "Surprised",
-          "tooltip": "Surprised"
-        }
       }
     },
     "damageTypes": {
@@ -240,8 +216,8 @@
           "label": "Burning",
           "description": "A creature that is burning takes 1d6 fire damage immediately and at the start of each subsequent round until the flames are extinguished. Each round, the creature may attempt a DC 15 Reflex save to put out the fire (success ends the condition). Jumping into water or smothering the flames grants a +4 bonus on this save. Flammable items may also catch fire and require their own saves."
         },
-        "concealed": {
-          "label": "Concealed",
+        "concealment": {
+          "label": "Concealment",
           "description": "<p>Miss chance applies to attacks because the target is concealed. Normal concealment has a lower success threshold than total concealment.</p>"
         },
         "disabled": {
@@ -314,11 +290,11 @@
         "GrappleNoTargets": "Grapple requires at least one target.",
         "GrappleFootnote": "+[[5]] circumstance bonus on grapple checks made against the same grappled target in subsequent rounds.",
         "GrappleConcentrationDC": "Concentration DC vs grapple: {dc} (10 + spell level {spellLevel} + grapple check {grappleTotal}).",
-        "ConcealedDialogTitle": "Choose Concealment Type",
-        "ConcealedNormal": "Normal (20%)",
-        "ConcealedTotal": "Total (50%)",
-        "ConcealedFootnote": "{variant}: Miss chance roll {roll}; success on {threshold}+.",
-        "ConcealedSelectionCanceled": "Concealment selection canceled."
+        "ConcealmentDialogTitle": "Choose Concealment Type",
+        "ConcealmentNormal": "Normal",
+        "ConcealmentTotal": "Total",
+        "ConcealmentFootnote": "{variant}: Miss chance roll {roll}; success on {threshold}+.",
+        "ConcealmentSelectionCanceled": "Concealment selection canceled."
       },
       "sockets": {
         "MovementRestrictionRemoved": "Movement restriction removed from token.",
@@ -326,8 +302,6 @@
         "HardToKillChoice": "Hard to Kill Choice",
         "ContinueFighting": "Continue Fighting",
         "FallUnconscious": "Fall Unconscious",
-        "UseFeatureYes": "Use",
-        "UseFeatureNo": "Don't Use",
         "MaxMoveWarning": "This token cannot move more than {limitFeet} feet.",
         "BlindMovementSpeedTitle": "Select Speed Type",
         "BlindMovementSpeedPrompt": "Choose which speed type this movement uses.",
@@ -335,17 +309,7 @@
         "BlindMovementCheckTitle": "Blind Movement Check",
         "RollAcrobatics": "Roll Acrobatics",
         "HardToKillPrompt": "{name} has a hard to kill ability. Would you like to continue fighting or fall unconscious?",
-        "BlindMovementCheckPrompt": "{name} is blind and needs to make a DC 10 Acrobatics check to move without falling prone.",
-        "DiehardTitle": "Diehard",
-        "DiehardPrompt": "{name} has Diehard. Would you like to keep fighting (as if disabled) or fall unconscious?",
-        "FightOnTitle": "Fight On",
-        "FightOnPrompt": "{name} can use Fight On to gain temporary hit points. Use it now?",
-        "OrcFerocityTitle": "Orc Ferocity",
-        "OrcFerocityPrompt": "{name} can use Orc Ferocity to fight on for 1 more round. Use it now?",
-        "AkitonianFerocityTitle": "Akitonian Ferocity",
-        "AkitonianFerocityPrompt": "{name} can use Akitonian Ferocity to fight on for 1 more round. Use it now?",
-        "ResolveUnstoppableTitle": "Resolve (Unstoppable)",
-        "ResolveUnstoppablePrompt": "{name} can spend a use of Resolve to stabilize and remain conscious. Use it now?"
+        "BlindMovementCheckPrompt": "{name} is blind and needs to make a DC 10 Acrobatics check to move without falling prone."
       }
     },
     "buffs": {
@@ -373,12 +337,7 @@
       "UpdatedExisting": "Updated existing {name} on {actor}",
       "Applied": "Applied {name} to {actor}",
       "FailedToApply": "Failed to apply {name}: {error}",
-      "NotEnoughSpellSlots": "Not enough spell slots to cast this spell on all targets! ({remaining} remaining, {needed} needed)",
-      "TargetingRejectedNoTargetsStrict": "Unable to apply automatic buffs for {name}: no valid targets were selected.",
-      "TargetingRejectedDisposition": "Unable to apply automatic buffs for {name}: all selected targets were filtered out by disposition settings.",
-      "TargetingRejectedManualSelection": "Unable to apply automatic buffs for {name}: target selection was canceled or no targets were selected.",
-      "TargetingRejectedCommunalSelection": "Unable to apply automatic buffs for {name}: communal target/duration selection was canceled.",
-      "TargetingRejectedUnknown": "Unable to apply automatic buffs for {name}: target validation failed."
+      "NotEnoughSpellSlots": "Not enough spell slots to cast this spell on all targets! ({remaining} remaining, {needed} needed)"
     },
     "metamagic": {
       "PersistentNoTargets": {
@@ -388,31 +347,6 @@
       },
       "PersistentSave": "Persistent Spell save",
       "PersistentSaveSecond": "Persistent Spell (second save)"
-    },
-    "clusteredShots": {
-      "buttonLabel": "🎯 Clustered Shots 🎯",
-      "labels": {
-        "normal": "Normal",
-        "critical": "Critical"
-      },
-      "tooltips": {
-        "include": "Include in Clustered Shots",
-        "applyBeforeDr": "Apply damage before DR (Clustered Shots)"
-      },
-      "warnings": {
-        "noAttacksFound": "No attacks found in this message.",
-        "noAttacksSelected": "No attacks selected for Clustered Shots. Please check at least one attack to include.",
-        "noDamageFound": "Clustered Shots found no damage to apply.",
-        "selectTargets": "Please select at least one token to apply damage to."
-      },
-      "errors": {
-        "noMessageId": "Could not find message ID.",
-        "noMessageData": "Could not find message data.",
-        "applyDamageUnavailable": "ApplyDamage is not available."
-      },
-      "info": {
-        "applied": "Applied {totalDamage} points of Clustered Shots damage to {targets} target(s)."
-      }
     }
   }
 }

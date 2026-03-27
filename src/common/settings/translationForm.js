@@ -14,6 +14,7 @@ export class TranslationForm extends FormApplication {
 
     getData() {
         const translations = game.settings.get(MODULE.ID, "translations") || {};
+        translations.hardness ||= "Hardness";
         translations.construct ||= "Construct Traits";
         translations.undead ||= "Undead Traits";
 
@@ -22,6 +23,7 @@ export class TranslationForm extends FormApplication {
 
     async _updateObject(event, formData) {
         const translations = {
+            hardness: formData.hardness.trim() || "Hardness",
             construct: formData.construct.trim() || "Construct Traits",
             undead: formData.undead.trim() || "Undead Traits"
         };
