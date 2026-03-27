@@ -64,8 +64,7 @@ export function registerActionUseWrapper() {
         if (options.skipDialog) {
           formData = {};
         } else {
-          const dialog = new pf1.applications.AttackDialog(this);
-          formData = await dialog.show();
+          formData = await this.createAttackDialog();
           if (!formData) return;
         }
         this.formData = formData;
