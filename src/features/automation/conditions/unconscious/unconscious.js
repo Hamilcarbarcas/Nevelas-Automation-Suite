@@ -1,12 +1,90 @@
 import { MODULE } from '../../../../common/module.js';
-import { getNewHp, hasHpUpdate } from '../../utils/healthUpdates.js';
+import { getPrimaryHealthValue, hasHpNonlethalUpdate, hasPrimaryHealthUpdate } from '../../utils/healthUpdates.js';
 import { detectHardToKillItems, getHtkFlag } from '../../utils/hardToKill.js';
 import { socket, getPreferredOwnerUserId } from '../../../../integration/moduleSockets.js';
+import { getWvState, isWoundsVigorActive } from '../../utils/woundsVigor.js';
+
+const NONLETHAL_UNCONSCIOUS_FLAG = "nonlethalThresholdUnconscious";
+const NONLETHAL_STAGGERED_FLAG = "nonlethalThresholdStaggered";
 
 function getPrevHpFromOptions(actorDocument, options) {
   const prev = options?._nasPrevHp;
   if (Number.isFinite(prev)) return prev;
   return actorDocument?.system?.attributes?.hp?.value ?? null;
+}
+
+function getCurrentHpState(actorDocument) {
+  const hp = Number(actorDocument?.system?.attributes?.hp?.value ?? 0) || 0;
+  const nonlethal = Number(actorDocument?.system?.attributes?.hp?.nonlethal ?? 0) || 0;
+  return { hp, nonlethal };
+}
+
+function getNonlethalThresholdState(actorDocument) {
+  const { hp, nonlethal } = getCurrentHpState(actorDocument);
+  return {
+    hp,
+    nonlethal,
+    shouldUnconscious: hp >= 0 && nonlethal > hp,
+    shouldStaggered: hp > 0 && nonlethal === hp
+  };
+}
+
+async function syncNonlethalThresholdStates(actorDocument, change) {
+  const hasRelevantUpdate =
+    hasPrimaryHealthUpdate(actorDocument, change) ||
+    hasHpNonlethalUpdate(change);
+  if (!hasRelevantUpdate) return;
+
+  const isDead = actorDocument.statuses?.has?.("dead");
+  const { hp, shouldUnconscious, shouldStaggered } = getNonlethalThresholdState(actorDocument);
+  const hadNlUnconscious = Boolean(actorDocument.getFlag(MODULE.ID, NONLETHAL_UNCONSCIOUS_FLAG));
+  const hadNlStaggered = Boolean(actorDocument.getFlag(MODULE.ID, NONLETHAL_STAGGERED_FLAG));
+
+  if (isDead || hp < 0) {
+    if (hadNlUnconscious) await actorDocument.unsetFlag(MODULE.ID, NONLETHAL_UNCONSCIOUS_FLAG);
+    if (hadNlStaggered) await actorDocument.unsetFlag(MODULE.ID, NONLETHAL_STAGGERED_FLAG);
+    return;
+  }
+
+  if (shouldUnconscious) {
+    if (!actorDocument.statuses?.has?.("unconscious")) {
+      await actorDocument.setCondition("unconscious", true);
+    }
+    if (!actorDocument.statuses?.has?.("prone")) {
+      await actorDocument.setCondition("prone", true);
+    }
+    if (actorDocument.statuses?.has?.("dying")) {
+      await actorDocument.setCondition("dying", false);
+    }
+    if (actorDocument.statuses?.has?.("staggered") && hadNlStaggered) {
+      await actorDocument.setCondition("staggered", false);
+    }
+    if (!hadNlUnconscious) await actorDocument.setFlag(MODULE.ID, NONLETHAL_UNCONSCIOUS_FLAG, true);
+    if (hadNlStaggered) await actorDocument.unsetFlag(MODULE.ID, NONLETHAL_STAGGERED_FLAG);
+    return;
+  }
+
+  if (hadNlUnconscious) {
+    if (actorDocument.statuses?.has?.("unconscious")) {
+      await actorDocument.setCondition("unconscious", false);
+    }
+    await actorDocument.unsetFlag(MODULE.ID, NONLETHAL_UNCONSCIOUS_FLAG);
+  }
+
+  if (shouldStaggered) {
+    if (!actorDocument.statuses?.has?.("staggered")) {
+      await actorDocument.setCondition("staggered", true);
+    }
+    if (!hadNlStaggered) await actorDocument.setFlag(MODULE.ID, NONLETHAL_STAGGERED_FLAG, true);
+    return;
+  }
+
+  if (hadNlStaggered) {
+    if (actorDocument.statuses?.has?.("staggered")) {
+      await actorDocument.setCondition("staggered", false);
+    }
+    await actorDocument.unsetFlag(MODULE.ID, NONLETHAL_STAGGERED_FLAG);
+  }
 }
 
 async function promptUseFeatureOnOwner(actorDocument, titleKey, promptKey) {
@@ -81,14 +159,59 @@ async function deductOneDailyUse(item) {
   return true;
 }
 
+async function handleWoundsVigorUnconscious(actorDocument, change) {
+  if (!hasPrimaryHealthUpdate(actorDocument, change)) return;
+
+  const woundsValue = getPrimaryHealthValue(actorDocument, change);
+  const state = getWvState(actorDocument);
+  const isDead = actorDocument.statuses?.has?.('dead');
+
+  if (woundsValue <= 0 || isDead) {
+    if (!actorDocument.statuses?.has?.('unconscious')) {
+      await actorDocument.setCondition('unconscious', true);
+    }
+    if (!actorDocument.statuses?.has?.('prone')) {
+      await actorDocument.setCondition('prone', true);
+    }
+    if (actorDocument.statuses?.has?.('dying')) {
+      await actorDocument.setCondition('dying', false);
+    }
+    if (actorDocument.statuses?.has?.('staggered')) {
+      await actorDocument.setCondition('staggered', false);
+    }
+    return;
+  }
+
+  // Wounded is represented by staggered in W&V; it is not unconscious by itself.
+  if (state.isWounded && actorDocument.statuses?.has?.('dying')) {
+    await actorDocument.setCondition('dying', false);
+  }
+
+  if (actorDocument.statuses?.has?.('unconscious')) {
+    await actorDocument.setCondition('unconscious', false);
+  }
+}
+
 export async function handleUnconsciousOnUpdate(actorDocument, change, options = {}) {
-  if (hasHpUpdate(change)) {
-    const newHp = getNewHp(actorDocument, change);
-    if (newHp >= 0 && actorDocument.statuses?.has?.("dying")) await actorDocument.setCondition("dying", false);
+  if (isWoundsVigorActive(actorDocument)) {
+    await handleWoundsVigorUnconscious(actorDocument, change);
+    return;
+  }
+
+  const dyingAutomationEnabled = game.settings.get(MODULE.ID, "enableDyingAutomation");
+
+  if (hasPrimaryHealthUpdate(actorDocument, change)) {
+    const newHp = getPrimaryHealthValue(actorDocument, change);
+    if (!dyingAutomationEnabled && newHp >= 0 && actorDocument.statuses?.has?.("dying")) {
+      await actorDocument.setCondition("dying", false);
+    }
 
     // Clear staggered when no longer negative HP (or if dead).
     if (newHp >= 0 || actorDocument.statuses?.has?.("dead")) {
-      if (actorDocument.statuses?.has?.("staggered")) await actorDocument.setCondition("staggered", false);
+      const nlState = getNonlethalThresholdState(actorDocument);
+      if (actorDocument.statuses?.has?.("staggered") && !nlState.shouldStaggered && !nlState.shouldUnconscious) {
+        await actorDocument.setCondition("staggered", false);
+      }
     }
 
     // Diehard choice should not persist once the actor is no longer at negative HP.
@@ -107,16 +230,19 @@ export async function handleUnconsciousOnUpdate(actorDocument, change, options =
     }
   }
 
-  if (hasHpUpdate(change)) {
-    const newHp = getNewHp(actorDocument, change);
-    if (newHp >= 0 && actorDocument.statuses.has("unconscious")) {
+  if (hasPrimaryHealthUpdate(actorDocument, change)) {
+    const newHp = getPrimaryHealthValue(actorDocument, change);
+    const nlState = getNonlethalThresholdState(actorDocument);
+    if (newHp >= 0 && actorDocument.statuses.has("unconscious") && !nlState.shouldUnconscious) {
       await actorDocument.setCondition("unconscious", false);
     }
   }
 
+  await syncNonlethalThresholdStates(actorDocument, change);
+
   const unconsciousSetting = game.settings.get(MODULE.ID, 'unconsciousAtNegativeHP');
-  if (unconsciousSetting !== 'none' && hasHpUpdate(change)) {
-    const newHp = getNewHp(actorDocument, change);
+  if (unconsciousSetting !== 'none' && hasPrimaryHealthUpdate(actorDocument, change)) {
+    const newHp = getPrimaryHealthValue(actorDocument, change);
     if (newHp < 0) {
       const isNPC = actorDocument.type === 'npc';
       const shouldApply = 
@@ -128,7 +254,9 @@ export async function handleUnconsciousOnUpdate(actorDocument, change, options =
         const conScore = Number(actorDocument.system?.abilities?.con?.total ?? actorDocument.system?.abilities?.con?.value ?? 0) || 0;
         if (conScore > 0 && newHp <= -conScore) {
           if (actorDocument.statuses?.has?.("staggered")) await actorDocument.setCondition("staggered", false);
-          if (actorDocument.statuses?.has?.("dying")) await actorDocument.setCondition("dying", false);
+          if (!dyingAutomationEnabled && actorDocument.statuses?.has?.("dying")) {
+            await actorDocument.setCondition("dying", false);
+          }
           await actorDocument.setCondition("unconscious", true);
           await actorDocument.setCondition("prone", true);
           return;
@@ -272,10 +400,12 @@ export async function handleUnconsciousOnUpdate(actorDocument, change, options =
           if (!actorDocument.statuses?.has?.("staggered")) await actorDocument.setCondition("staggered", true);
         }
 
-        if (refreshedStayConscious) {
-          if (actorDocument.statuses?.has?.("dying")) await actorDocument.setCondition("dying", false);
-        } else if (newHp < 0 && !actorDocument.statuses?.has?.("dead") && !actorDocument.statuses?.has?.("dying")) {
-          await actorDocument.setCondition("dying", true);
+        if (!dyingAutomationEnabled) {
+          if (refreshedStayConscious) {
+            if (actorDocument.statuses?.has?.("dying")) await actorDocument.setCondition("dying", false);
+          } else if (newHp < 0 && !actorDocument.statuses?.has?.("dead") && !actorDocument.statuses?.has?.("dying")) {
+            await actorDocument.setCondition("dying", true);
+          }
         }
 
         if (!refreshedStayConscious) {

@@ -4,7 +4,7 @@ export class BuffCompendiaSelector extends FormApplication {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "buff-compendia-selector",
-      title: "Select Buff Compendia",
+      title: game.i18n.localize("NAS.forms.buffCompendiaSelector.title"),
       template: `modules/${MODULE.ID}/src/templates/buff-compendia-selector.html`,
       classes: ["sheet"],
       width: 500,
@@ -73,7 +73,8 @@ export class BuffCompendiaSelector extends FormApplication {
 
     return {
       compendia: allCompendia,
-      includeWorldBuffs
+      includeWorldBuffs,
+      worldIdLabel: game.i18n.localize("NAS.forms.buffCompendiaSelector.worldId")
     };
   }
   
@@ -89,9 +90,8 @@ export class BuffCompendiaSelector extends FormApplication {
       selectedCompendia.push("__world__");
     }
     await game.settings.set(MODULE.ID, 'customBuffCompendia', selectedCompendia);
-    ui.notifications.info(`${MODULE.ID} | Saved custom buff compendia (${selectedCompendia.length} selected)`);
+    ui.notifications.info(game.i18n.format("NAS.forms.buffCompendiaSelector.savedInfo", {
+      count: selectedCompendia.length
+    }));
   }
 }
-
-
-

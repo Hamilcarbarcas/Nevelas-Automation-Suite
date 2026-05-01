@@ -1,4 +1,5 @@
 import { MODULE } from "../../../common/module.js";
+import { elementFromHtmlLike } from "../../../common/foundryCompat.js";
 
 function getCastingTimeLabel() {
   return (game.i18n?.localize?.("PF1.CastingTime") ?? "Casting Time").toLowerCase();
@@ -48,7 +49,7 @@ export function applyChatActivationOverrides(message, html) {
   const activation = override.activation ?? message?.actionSource?.activation;
   const label = getActivationLabel(activation);
 
-  const root = Array.isArray(html) ? html[0] : html?.[0] || html;
+  const root = elementFromHtmlLike(html);
   if (!root) return;
 
   const castingTimeLabel = getCastingTimeLabel();

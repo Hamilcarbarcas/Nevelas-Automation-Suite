@@ -1,4 +1,5 @@
 import { MODULE } from '../module.js';
+import { jqueryFromHtmlLike } from '../foundryCompat.js';
 import { populateDefaultTypes } from '../config.js';
 import { DRTypeEditor } from './drTypeEditor.js';
 
@@ -28,6 +29,7 @@ export class DamagePriorityForm extends FormApplication {
 
     activateListeners(html) {
         super.activateListeners(html);
+        html = jqueryFromHtmlLike(html) ?? html;
         html.find('.add-row').click(this._onAddRow.bind(this));
         html.find('.delete-row').click(this._onDeleteRow.bind(this));
         html.find('.reset-defaults').click(this._onResetDefaults.bind(this));

@@ -1,0 +1,32 @@
+<form class="nas-wound-types-form">
+  <p class="nas-wound-types-description">
+    {{localize "NAS.forms.woundDamageTypesForm.description"}}
+  </p>
+
+  <div class="nas-wound-types-toolbar">
+    <button type="button" class="nas-wound-types-toolbtn" data-action="select-all">
+      {{localize "NAS.forms.woundDamageTypesForm.selectAll"}}
+    </button>
+    <button type="button" class="nas-wound-types-toolbtn" data-action="clear-all">
+      {{localize "NAS.forms.woundDamageTypesForm.clearAll"}}
+    </button>
+    <button type="button" class="nas-wound-types-toolbtn" data-action="defaults">
+      {{localize "NAS.forms.woundDamageTypesForm.defaults"}}
+    </button>
+  </div>
+
+  <div class="nas-wound-types-list">
+    {{#each types}}
+      <label class="nas-wound-types-row">
+        <input class="nas-wound-types-check" type="checkbox" name="type.{{this.id}}" {{#if this.checked}}checked{{/if}} />
+        <span class="nas-wound-types-name">{{this.label}}</span>
+      </label>
+    {{/each}}
+  </div>
+
+  <div class="nas-wound-types-actions">
+    <button type="submit">
+      <i class="fas fa-save"></i> {{localize "NAS.common.buttons.save"}}
+    </button>
+  </div>
+</form>

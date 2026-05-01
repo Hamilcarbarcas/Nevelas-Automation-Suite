@@ -1,7 +1,8 @@
 import { MODULE } from '../../../../common/module.js';
 import { socket, getPreferredOwnerUserId } from '../../../../integration/moduleSockets.js';
-import { getNewHp, hasHpUpdate } from '../../utils/healthUpdates.js';
+import { getPrimaryHealthValue, hasPrimaryHealthUpdate } from '../../utils/healthUpdates.js';
 import { detectHardToKillItems, getHtkFlag } from '../../utils/hardToKill.js';
+import { isWoundsVigorActive, shouldBeStaggeredFromWv } from '../../utils/woundsVigor.js';
 
 export async function handleDisabledOnUpdate(actorDocument, change) {
   const disableSetting = game.settings.get(MODULE.ID, 'disableAtZeroHP');
@@ -10,9 +11,13 @@ export async function handleDisabledOnUpdate(actorDocument, change) {
   if ((disableSetting === 'everyone' || 
      (disableSetting === 'player' && actorType === 'character') || 
      (disableSetting === 'npc' && actorType === 'npc')) && 
-    hasHpUpdate(change)) {
-    const newHp = getNewHp(actorDocument, change);
-    if (newHp === 0) {
+     hasPrimaryHealthUpdate(actorDocument, change)) {
+      const isWv = isWoundsVigorActive(actorDocument);
+      const newHealth = getPrimaryHealthValue(actorDocument, change);
+      const shouldDisable = isWv
+        ? shouldBeStaggeredFromWv(actorDocument)
+        : newHealth === 0;
+      if (shouldDisable) {
         await actorDocument.setCondition("disabled", true);
     }
   }
@@ -24,6 +29,7 @@ export async function handleDisabledStrenuousAction(action) {
   const actor = token?.actor;
 
   if (game.settings.get(MODULE.ID, 'disableAtZeroHP')) {
+    if (isWoundsVigorActive(actor)) return;
     const activationTypes = ["nonaction", "passive", "free", "swift", "immediate", "move", "standard", "full", "attack", "aoo", "round", "minute", "hour", "special"]
     const strenuousTypes = ["standard", "full", "attack", "aoo", "round", "minute", "hour"]
     if (strenuousTypes.includes(action.action?.activation?.type)) {

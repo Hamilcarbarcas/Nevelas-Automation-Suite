@@ -1,14 +1,14 @@
 <form>
-  <p class="notes">View and remove remembered variant assignments for spells and abilities. Check entries to remove and click Save.</p>
+  <p class="notes">{{localize "NAS.forms.variantMappingManager.notes"}}</p>
   <table style="width:100%; border-collapse: collapse;">
     <thead>
       <tr>
-        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">Spell / Ability</th>
-        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">Allies Variant</th>
-        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">Foes Variant</th>
-        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">Switching</th>
-        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">Per-Target</th>
-        <th style="text-align:center; border-bottom: 1px solid #ccc; padding: 4px 0;">Remove</th>
+        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">{{localize "NAS.forms.variantMappingManager.columns.spellAbility"}}</th>
+        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">{{localize "NAS.forms.variantMappingManager.columns.alliesVariant"}}</th>
+        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">{{localize "NAS.forms.variantMappingManager.columns.foesVariant"}}</th>
+        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">{{localize "NAS.forms.variantMappingManager.columns.switching"}}</th>
+        <th style="text-align:left; border-bottom: 1px solid #ccc; padding: 4px 0;">{{localize "NAS.forms.variantMappingManager.columns.perTarget"}}</th>
+        <th style="text-align:center; border-bottom: 1px solid #ccc; padding: 4px 0;">{{localize "NAS.common.buttons.remove"}}</th>
       </tr>
     </thead>
     <tbody>
@@ -24,13 +24,12 @@
       {{/each}}
       {{#unless mappings.length}}
       <tr>
-        <td colspan="6" style="padding: 8px 0; color: #888;">No saved mappings.</td>
+        <td colspan="6" style="padding: 8px 0; color: #888;">{{localize "NAS.forms.variantMappingManager.empty"}}</td>
       </tr>
       {{/unless}}
     </tbody>
   </table>
   <footer class="sheet-footer flexrow">
-    <button type="submit" name="submit"><i class="fas fa-save"></i> Save</button>
+    <button type="submit" name="submit"><i class="fas fa-save"></i> {{localize "NAS.common.buttons.save"}}</button>
   </footer>
 </form>
-

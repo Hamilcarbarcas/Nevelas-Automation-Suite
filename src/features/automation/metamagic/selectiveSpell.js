@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "selectiveSpell",
   name: "Selective Spell",
-  prefix: "Selective",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.selectiveSpell") ?? "Selective"; },
 };
 
 export function applySelectiveSpell(context) {

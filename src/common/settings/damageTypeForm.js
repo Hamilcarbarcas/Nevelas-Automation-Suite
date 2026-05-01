@@ -1,5 +1,7 @@
 import { MODULE } from '../module.js';
+import { jqueryFromHtmlLike } from '../foundryCompat.js';
 import { EditDamageType } from './editDamageType.js';
+import { updateDamageTypeReferences } from '../migrations.js';
 
 export class DamageTypeFormApplication extends FormApplication {
     constructor(...args) {
@@ -13,7 +15,7 @@ export class DamageTypeFormApplication extends FormApplication {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             id: "damage-type-form",
-            title: game.i18n.localize("NAS.settings.customSetting.name"),
+            title: game.i18n.localize("NAS.damageTypes.title"),
             template: `modules/${MODULE.ID}/src/templates/custom-damage-type-form.html`,
             width: 600,
             height: "auto",
@@ -31,6 +33,7 @@ export class DamageTypeFormApplication extends FormApplication {
   
     activateListeners(html) {
         super.activateListeners(html);
+        html = jqueryFromHtmlLike(html) ?? html;
         html.find('button[name="save"]').click(this._onSave.bind(this));
         html.find('button[name="clear"]').click(this._onClear.bind(this));
         html.find('button.file-picker').click(this._onFilePicker.bind(this));
@@ -42,6 +45,9 @@ export class DamageTypeFormApplication extends FormApplication {
         html.find('input[name="flag-type"]').on('click', this._onRadioClick.bind(this));
     
         html.find('input[name="custom-category"]').on('focus', this._onCustomCategoryFocus.bind(this));
+
+        html.find('input[name="img-color"]').on('input', () => this._syncImagePreview());
+        this._syncImagePreview();
     }
   
     _onCustomCategoryFocus(event) {
@@ -72,6 +78,7 @@ export class DamageTypeFormApplication extends FormApplication {
         const abbr = form.abbr.value.trim();
         const icon = form.icon.value.trim();
         const color = form.color.value; 
+        const imgColor = form["img-color"]?.value ?? "#000000";
         const isModifier = form.isModifier.checked;
   
         const flagType = form["flag-type"].value;
@@ -106,11 +113,14 @@ export class DamageTypeFormApplication extends FormApplication {
         if (!category) return ui.notifications.error(game.i18n.localize("NAS.common.errors.categoryRequired"));
   
         const key = name.toLowerCase(); 
+        const imageData = await this._prepareImageValue(img, imgColor);
         const newDamageType = {
             key,
             value: {
                 name,
-                img,
+                img: imageData.img,
+                imgOriginal: imageData.imgOriginal,
+                imgColor,
                 category,
                 flags,
                 namespace: MODULE.ID,
@@ -162,9 +172,13 @@ export class DamageTypeFormApplication extends FormApplication {
             current: this.form.img.value,
             callback: path => {
                 this.form.img.value = path; 
+                this._syncImagePreview();
             },
             options: options
         });
+
+        if (typeof filePicker.browse === "function") await filePicker.browse();
+        else if (typeof filePicker.render === "function") filePicker.render(true);
     }
   
     async _onEdit(event) {
@@ -173,7 +187,8 @@ export class DamageTypeFormApplication extends FormApplication {
         const item = this.savedDamageTypes[index]; 
     
         new EditDamageType(item, index, async (newValues) => {
-            const key = newValues.name.toLowerCase(); 
+            const oldKey = String(item.key ?? item.value?._id ?? item.value?.name ?? "").toLowerCase().trim();
+            const key = newValues.name.toLowerCase().trim();
     
             this.savedDamageTypes[index] = {
                 key,
@@ -193,6 +208,9 @@ export class DamageTypeFormApplication extends FormApplication {
             };
     
             await game.settings.set(MODULE.ID, "customDamageTypes", this.savedDamageTypes);
+            if (oldKey && key && oldKey !== key) {
+                await updateDamageTypeReferences(new Map([[oldKey, key]]));
+            }
             this.render(); 
     
             this._promptReload();
@@ -243,6 +261,73 @@ export class DamageTypeFormApplication extends FormApplication {
             default: "no"
         });
         dialog.render(true);
+    }
+
+    _isSvgPath(path) {
+        if (!path || typeof path !== "string") return false;
+        if (/^data:image\/svg\+xml/i.test(path)) return true;
+        return /\.svg(?:$|[?#])/i.test(path);
+    }
+
+    _injectSvgTint(svgText, color) {
+        if (!svgText || typeof svgText !== "string") return null;
+        const match = svgText.match(/<svg\b[^>]*>/i);
+        if (!match) return null;
+
+        const style = `<style>*:not([fill="none"]):not([stroke="none"]){fill:${color} !important;stroke:${color} !important;}</style>`;
+        return svgText.replace(match[0], `${match[0]}${style}`);
+    }
+
+    async _createTintedSvgDataUrl(path, color) {
+        try {
+            if (/^data:image\/svg\+xml/i.test(path)) return path;
+            const response = await fetch(path);
+            if (!response.ok) return null;
+            const svgText = await response.text();
+            const tintedSvg = this._injectSvgTint(svgText, color);
+            if (!tintedSvg) return null;
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(tintedSvg)}`;
+        } catch (_err) {
+            return null;
+        }
+    }
+
+    async _prepareImageValue(path, color) {
+        if (!path) return { img: "", imgOriginal: "" };
+        if (!this._isSvgPath(path) || /^data:image\/svg\+xml/i.test(path)) {
+            return { img: path, imgOriginal: "" };
+        }
+
+        const tinted = await this._createTintedSvgDataUrl(path, color);
+        if (!tinted) return { img: path, imgOriginal: "" };
+        return { img: tinted, imgOriginal: path };
+    }
+
+    async _syncImagePreview() {
+        const preview = this.element?.find?.("[data-image-preview]")?.[0];
+        const colorPicker = this.element?.find?.('input[name="img-color"]')?.[0];
+        if (!preview) return;
+
+        const path = (this.form?.img?.value ?? "").trim();
+        const color = this.form?.["img-color"]?.value ?? "#000000";
+        const isSvg = this._isSvgPath(path);
+
+        if (colorPicker) colorPicker.style.display = isSvg ? "inline-block" : "none";
+
+        if (!path) {
+            preview.removeAttribute("src");
+            preview.style.display = "none";
+            return;
+        }
+
+        let previewSrc = path;
+        if (isSvg) {
+            const tinted = await this._createTintedSvgDataUrl(path, color);
+            if (tinted) previewSrc = tinted;
+        }
+
+        preview.src = previewSrc;
+        preview.style.display = "block";
     }
   
     async _updateObject(event, formData) {

@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "reachSpell",
   name: "Reach Spell",
-  prefix: "Reach",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.reachSpell") ?? "Reach"; },
 };
 
 const RANGE_ORDER = ["touch", "close", "medium", "long"];

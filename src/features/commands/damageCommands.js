@@ -1,7 +1,17 @@
 
 import { MODULE } from '../../common/module.js';
+import {
+  applyNasChatDamageButton,
+  applyNasHeadlessDamage
+} from '../automation/damage/systemApplyDamage.js';
+import { toDamagePartModel } from '../automation/damage/instances.js';
 
 export class DamageCommands {
+  static i18n(path, data = null) {
+    const key = `NAS.commands.damage.${path}`;
+    return data ? game.i18n.format(key, data) : game.i18n.localize(key);
+  }
+
   static initialize() {
     Hooks.on('chatMessage', this.handleChatCommand.bind(this));
     this.registerApplyButtonWrapper();
@@ -38,7 +48,7 @@ export class DamageCommands {
         damageTypes = typeMatch[1].split(/\s*\+\s*/).map(t => t.trim());
         formula = forMatch[1].trim();
       } else {
-        ui.notifications.error("Invalid format for ASDamage.roll(). Use 'type: X, for: Y' or '1d8 fire + 2d6 acid'");
+        ui.notifications.error(this.i18n("errors.invalidMacroFormat"));
         return null;
       }
     } else if (typeof options === "object") {
@@ -51,17 +61,17 @@ export class DamageCommands {
       formula = options.formula || "";
       damageTypes = Array.isArray(options.damageTypes) ? options.damageTypes : [options.damageType || ""];
     } else {
-      ui.notifications.error("Invalid argument for ASDamage.roll(). Use a string or object.");
+      ui.notifications.error(this.i18n("errors.invalidMacroArgument"));
       return null;
     }
     
     if (!formula) {
-      ui.notifications.error("No formula provided for damage roll");
+      ui.notifications.error(this.i18n("errors.noFormulaProvided"));
       return null;
     }
     
     if (!damageTypes.length || !damageTypes[0]) {
-      ui.notifications.warn("No damage type provided, using 'untyped'");
+      ui.notifications.warn(this.i18n("warnings.noDamageTypeProvidedUsingUntyped"));
       damageTypes = ["untyped"];
     }
     
@@ -127,7 +137,7 @@ export class DamageCommands {
   static async createComponentDamageRoll(components) {
     try {
       if (components.length === 0) {
-        ui.notifications.error("No damage components provided");
+        ui.notifications.error(this.i18n("errors.noDamageComponentsProvided"));
         return null;
       }
       
@@ -180,8 +190,8 @@ export class DamageCommands {
       
       const buttonsHtml = `
         <div class="card-buttons flexrow">
-          <button type="button" data-action="applyDamage" data-ratio="1" data-value="${fullDamage}" data-damage-types="${damageTypesArray.join(',')}">Apply</button>
-          <button type="button" data-action="applyDamage" data-ratio="0.5" data-value="${halfDamage}" data-damage-types="${damageTypesArray.join(',')}">Apply Half</button>
+          <button type="button" data-action="applyDamage" data-ratio="1" data-value="${fullDamage}" data-damage-types="${damageTypesArray.join(',')}">${this.i18n("chat.apply")}</button>
+          <button type="button" data-action="applyDamage" data-ratio="0.5" data-value="${halfDamage}" data-damage-types="${damageTypesArray.join(',')}">${this.i18n("chat.applyHalf")}</button>
         </div>
       `;
       
@@ -216,7 +226,7 @@ export class DamageCommands {
           $partTotals.html(roll.total);
         }
         
-        content += `\n  <section class=\"component-tooltip\">\n    <div class=\"component-label\"><strong>Damage Roll ${i + 1}</strong></div>\n    ${$tooltip.html()}\n  </section>\n`;
+        content += `\n  <section class=\"component-tooltip\">\n    <div class=\"component-label\"><strong>${this.i18n("dialogs.messages.componentLabel", { index: i + 1 })}</strong></div>\n    ${$tooltip.html()}\n  </section>\n`;
       }
       content += `</div>`; 
       
@@ -246,11 +256,11 @@ export class DamageCommands {
       };
       
       const message = await ChatMessage.create(messageData);
-      
+
       return message;
     } catch (error) {
       console.error(`${MODULE.ID} | Error creating component damage roll`, error);
-      ui.notifications.error("Error creating damage roll");
+      ui.notifications.error(this.i18n("errors.errorCreatingDamageRoll"));
       return null;
     }
   }
@@ -260,7 +270,7 @@ export class DamageCommands {
       const damageComponents = this.parseMixedDamageString(mixedDamageString);
       
       if (damageComponents.length === 0) {
-        ui.notifications.error("Failed to parse mixed damage formula");
+        ui.notifications.error(this.i18n("errors.failedParseMixedDamageFormula"));
         return null;
       }
       
@@ -272,7 +282,7 @@ export class DamageCommands {
       return this.createComponentDamageRoll(components);
     } catch (error) {
       console.error(`${MODULE.ID} | Error creating mixed damage roll`, error);
-      ui.notifications.error("Error creating mixed damage roll");
+      ui.notifications.error(this.i18n("errors.errorCreatingMixedDamageRoll"));
       return null;
     }
   }
@@ -339,8 +349,12 @@ export class DamageCommands {
     return null;
   }
 
-  static onChatButton(wrapped, message, elementObject) {
-    const actionName = elementObject?.target?.dataset?.action;
+  static async onChatButton(wrapped, message, elementObject) {
+    const nasChatDamage = await applyNasChatDamageButton(message, elementObject);
+    if (nasChatDamage?.handled) return false;
+
+    const button = elementObject?.currentTarget ?? elementObject?.target;
+    const actionName = button?.dataset?.action;
     if (actionName !== "applyDamage") return wrapped(message, elementObject);
 
     const flags = message?.flags?.[MODULE.ID];
@@ -348,14 +362,29 @@ export class DamageCommands {
       return wrapped(message, elementObject);
     }
 
-    const button = elementObject?.target;
     if (!button) return wrapped(message, elementObject);
 
-    const instances = Array.isArray(flags.damageInstances) ? flags.damageInstances : [];
-    if (!instances.length) return wrapped(message, elementObject);
+    const rawInstances = Array.isArray(flags.damageInstances) ? flags.damageInstances : [];
+    if (!rawInstances.length) return wrapped(message, elementObject);
 
     const ratio = Number(button.dataset.ratio);
     const appliedRatio = (Number.isFinite(ratio) && ratio > 0) ? ratio : 1;
+
+    const instances = (foundry.utils?.deepClone ? foundry.utils.deepClone(rawInstances) : rawInstances)
+      .map((inst) => {
+        const rawTypes = inst?.types ?? inst?.typeIds ?? [];
+        const typeList = rawTypes instanceof Set
+          ? Array.from(rawTypes)
+          : (Array.isArray(rawTypes) ? rawTypes : [rawTypes]);
+        const resolvedTypeIds = this.resolveDamageTypeIds(typeList.filter((entry) => typeof entry === "string"));
+        const numericValue = Number(inst?.value ?? inst?.total ?? inst?.formula) || 0;
+
+        return toDamagePartModel({
+          types: resolvedTypeIds,
+          value: numericValue,
+          formula: String(numericValue)
+        });
+      });
 
     const totalValue = instances.reduce((sum, inst) => {
       return sum + (Number(inst?.value ?? inst?.total ?? inst?.formula) || 0);
@@ -365,14 +394,17 @@ export class DamageCommands {
 
     const ev = elementObject?.event ?? elementObject?.originalEvent ?? null;
     const applyOptions = {
-      instances: foundry.utils?.deepClone ? foundry.utils.deepClone(instances) : instances,
+      instances,
       ratio: appliedRatio,
       message,
       element: button,
       event: ev
     };
 
-    pf1?.documents?.actor?.ActorPF?.applyDamage?.(totalValue, applyOptions);
+    const applied = await applyNasHeadlessDamage(totalValue, applyOptions);
+    if (!applied?.handled) {
+      pf1?.documents?.actor?.ActorPF?.applyDamage?.(totalValue, applied?.options ?? applyOptions);
+    }
     return false;
   }
 
@@ -389,21 +421,21 @@ export class DamageCommands {
     let content = `
       <form>
         <div class="form-group">
-          <label>Damage Components:</label>
+          <label>${this.i18n("dialogs.labels.damageComponents")}</label>
           <div id="damage-components-list">
             <!-- Damage components will be added here -->
-            <div class="empty-message">No damage components yet. Click "Add Roll" to create a damage roll.</div>
+            <div class="empty-message">${this.i18n("dialogs.messages.emptyComponents")}</div>
           </div>
         </div>
         
         <div class="form-group">
           <button type="button" id="add-damage-component" class="damage-component-add-btn">
-            <i class="fas fa-plus"></i> Add Roll
+            <i class="fas fa-plus"></i> ${this.i18n("dialogs.buttons.addRoll")}
           </button>
         </div>
         
         <div class="components-info" style="font-size: 0.9em; color: #777; margin-top: 5px;">
-          Add one or more damage rolls with their own formulas and damage types.
+          ${this.i18n("dialogs.messages.componentsInfo")}
         </div>
       </form>
     `;
@@ -411,15 +443,15 @@ export class DamageCommands {
     const damageComponents = [];
     
     const mainDialog = new Dialog({
-      title: `${MODULE.SHORTNAME} Damage`,
+      title: this.i18n("dialogs.mainTitle", { shortName: MODULE.SHORTNAME }),
       content: content,
       buttons: {
         roll: {
           icon: '<i class="fas fa-dice-d20"></i>',
-          label: "Roll Damage",
+          label: this.i18n("dialogs.buttons.rollDamage"),
           callback: (html) => {
             if (damageComponents.length === 0) {
-              ui.notifications.error("Please add at least one damage component");
+              ui.notifications.error(this.i18n("errors.addAtLeastOneDamageComponent"));
               return;
             }
             
@@ -428,7 +460,7 @@ export class DamageCommands {
         },
         cancel: {
           icon: '<i class="fas fa-times"></i>',
-          label: "Cancel"
+          label: this.i18n("dialogs.buttons.cancel")
         }
       },
       default: "roll",
@@ -525,7 +557,7 @@ export class DamageCommands {
           list.empty();
           
           if (damageComponents.length === 0) {
-            list.append(`<div class="empty-message">No damage components yet. Click "Add Roll" to create a damage roll.</div>`);
+            list.append(`<div class="empty-message">${this.i18n("dialogs.messages.emptyComponents")}</div>`);
             const dialog = html.closest('.app');
             dialog.css({
               'height': '210px',
@@ -552,7 +584,9 @@ export class DamageCommands {
           
           damageComponents.forEach((component, index) => {
             const typeNames = component.damageTypes.map(type => sortedTypes[type] || type);
-            const typeLabel = typeNames.length === 1 ? "Damage Type:" : "Damage Types:";
+            const typeLabel = typeNames.length === 1
+              ? this.i18n("dialogs.messages.componentTypeSingle")
+              : this.i18n("dialogs.messages.componentTypePlural");
             const componentHtml = `
               <div class="damage-component" data-index="${index}">
                 <div class="damage-component-formula">${component.formula}</div>
@@ -580,12 +614,12 @@ export class DamageCommands {
     let content = `
       <form>
         <div class="form-group">
-          <label for="component-formula">Damage Formula:</label>
-          <input type="text" id="component-formula" name="formula" placeholder="e.g. 1d8+5" style="width: 100%;">
+          <label for="component-formula">${this.i18n("dialogs.labels.damageFormula")}</label>
+          <input type="text" id="component-formula" name="formula" placeholder="${this.i18n("dialogs.placeholders.formula")}" style="width: 100%;">
         </div>
         
         <div class="form-group">
-          <label>Damage Type(s):</label>
+          <label>${this.i18n("dialogs.labels.damageTypes")}</label>
         </div>
         
         <div class="checkbox-grid">
@@ -608,16 +642,16 @@ export class DamageCommands {
     `;
     
     const dialog = new Dialog({
-      title: "Add Damage Roll",
+      title: this.i18n("dialogs.addDamageRollTitle"),
       content: content,
       buttons: {
         add: {
           icon: '<i class="fas fa-plus"></i>',
-          label: "Add",
+          label: this.i18n("dialogs.buttons.add"),
           callback: (html) => {
             const formula = html.find('#component-formula').val().trim();
             if (!formula) {
-              ui.notifications.error("Please enter a damage formula");
+              ui.notifications.error(this.i18n("errors.enterDamageFormula"));
               return;
             }
             
@@ -627,7 +661,7 @@ export class DamageCommands {
             });
             
             if (selectedTypes.length === 0) {
-              ui.notifications.error("Please select at least one damage type");
+              ui.notifications.error(this.i18n("errors.selectAtLeastOneDamageType"));
               return;
             }
             
@@ -639,7 +673,7 @@ export class DamageCommands {
         },
         cancel: {
           icon: '<i class="fas fa-times"></i>',
-          label: "Cancel"
+          label: this.i18n("dialogs.buttons.cancel")
         }
       },
       default: "add",
@@ -738,15 +772,15 @@ export class DamageCommands {
       
       const buttonsHtml = `
         <div class="card-buttons flexrow">
-          <button type="button" data-action="applyDamage" data-ratio="1" data-value="${fullDamage}" data-damage-types="${resolvedTypes.join(',')}">Apply</button>
-          <button type="button" data-action="applyDamage" data-ratio="0.5" data-value="${halfDamage}" data-damage-types="${resolvedTypes.join(',')}">Apply Half</button>
+          <button type="button" data-action="applyDamage" data-ratio="1" data-value="${fullDamage}" data-damage-types="${resolvedTypes.join(',')}">${this.i18n("chat.apply")}</button>
+          <button type="button" data-action="applyDamage" data-ratio="0.5" data-value="${halfDamage}" data-damage-types="${resolvedTypes.join(',')}">${this.i18n("chat.applyHalf")}</button>
         </div>
       `;
       
       const rollContent = await roll.render();
       
       const messageData = {
-        flavor: `Damage: ${resolvedTypes.join(", ")}`,
+        flavor: this.i18n("chat.flavorDamage", { types: resolvedTypes.join(", ") }),
         content: rollContent + buttonsHtml,
         speaker: ChatMessage.getSpeaker(),
         rolls: [roll],
@@ -769,7 +803,7 @@ export class DamageCommands {
       };
       
       const message = await ChatMessage.create(messageData);
-      
+
       return message;
     } catch (error) {
       console.error(`${MODULE.ID} | Error creating damage roll`, error);
@@ -778,8 +812,8 @@ export class DamageCommands {
   }
 
   static showFormatError() {
-    ui.notifications.error("Invalid format for /ad command");
-    ui.notifications.info("Examples: /ad 1d8+5 fire  or  /ad 1d8 fire + 2d6 acid");
+    ui.notifications.error(this.i18n("errors.invalidAdFormat"));
+    ui.notifications.info(this.i18n("info.adExamples"));
   }
 
   static showMacroCreationDialog() {
@@ -795,26 +829,26 @@ export class DamageCommands {
     let content = `
       <form>
         <div class="form-group">
-          <label for="macro-name">Macro Name:</label>
-          <input type="text" id="macro-name" name="macro-name" placeholder="${MODULE.SHORTNAME} Damage Macro" style="width: 100%;">
+          <label for="macro-name">${this.i18n("dialogs.labels.macroName")}</label>
+          <input type="text" id="macro-name" name="macro-name" placeholder="${this.i18n("dialogs.placeholders.macroName", { shortName: MODULE.SHORTNAME })}" style="width: 100%;">
         </div>
         
         <div class="form-group">
-          <label>Damage Components:</label>
+          <label>${this.i18n("dialogs.labels.damageComponents")}</label>
           <div id="damage-components-list">
             <!-- Damage components will be added here -->
-            <div class="empty-message">No damage components yet. Click "Add Roll" to create a damage roll.</div>
+            <div class="empty-message">${this.i18n("dialogs.messages.emptyComponents")}</div>
           </div>
         </div>
         
         <div class="form-group">
           <button type="button" id="add-damage-component" class="damage-component-add-btn">
-            <i class="fas fa-plus"></i> Add Roll
+            <i class="fas fa-plus"></i> ${this.i18n("dialogs.buttons.addRoll")}
           </button>
         </div>
         
         <div class="components-info" style="font-size: 0.9em; color: #777; margin-top: 5px;">
-          Add one or more damage rolls with their own formulas and damage types.
+          ${this.i18n("dialogs.messages.componentsInfo")}
         </div>
       </form>
     `;
@@ -822,15 +856,15 @@ export class DamageCommands {
     const damageComponents = [];
     
     const mainDialog = new Dialog({
-      title: "Create Damage Macro",
+      title: this.i18n("dialogs.createMacroTitle"),
       content: content,
       buttons: {
         create: {
           icon: '<i class="fas fa-save"></i>',
-          label: "Create Macro",
+          label: this.i18n("dialogs.buttons.createMacro"),
           callback: (html) => {
             if (damageComponents.length === 0) {
-              ui.notifications.error("Please add at least one damage component");
+              ui.notifications.error(this.i18n("errors.addAtLeastOneDamageComponent"));
               return;
             }
             
@@ -844,7 +878,7 @@ export class DamageCommands {
         },
         cancel: {
           icon: '<i class="fas fa-times"></i>',
-          label: "Cancel"
+          label: this.i18n("dialogs.buttons.cancel")
         }
       },
       default: "create",
@@ -941,7 +975,7 @@ export class DamageCommands {
           list.empty();
           
           if (damageComponents.length === 0) {
-            list.append(`<div class="empty-message">No damage components yet. Click "Add Roll" to create a damage roll.</div>`);
+            list.append(`<div class="empty-message">${this.i18n("dialogs.messages.emptyComponents")}</div>`);
             const dialog = html.closest('.app');
             dialog.css({
               'height': '235px',
@@ -968,7 +1002,9 @@ export class DamageCommands {
           
           damageComponents.forEach((component, index) => {
             const typeNames = component.damageTypes.map(type => sortedTypes[type] || type);
-            const typeLabel = typeNames.length === 1 ? "Damage Type:" : "Damage Types:";
+            const typeLabel = typeNames.length === 1
+              ? this.i18n("dialogs.messages.componentTypeSingle")
+              : this.i18n("dialogs.messages.componentTypePlural");
             const componentHtml = `
               <div class="damage-component" data-index="${index}">
                 <div class="damage-component-formula">${component.formula}</div>
@@ -993,7 +1029,7 @@ export class DamageCommands {
   }
   
   static getAvailableMacroName() {
-    const baseName = `${MODULE.SHORTNAME} Damage Macro`;
+      const baseName = this.i18n("dialogs.placeholders.macroName", { shortName: MODULE.SHORTNAME });
     let counter = 1;
     let name = baseName;
     
@@ -1008,7 +1044,6 @@ export class DamageCommands {
   static createDamageMacro(name, components) {
     try {
       const macroCommand = `
-// Automatically generated by ${MODULE.SHORTNAME}
 ASDamage.roll({
   components: ${JSON.stringify(components, null, 2)}
 });`;
@@ -1024,11 +1059,11 @@ ASDamage.roll({
           }
         }
       }).then(macro => {
-        ui.notifications.info(`Macro "${name}" created successfully.`);
+        ui.notifications.info(this.i18n("info.macroCreated", { name }));
       });
     } catch (error) {
       console.error(`${MODULE.ID} | Error creating macro`, error);
-      ui.notifications.error("Error creating damage macro");
+      ui.notifications.error(this.i18n("errors.errorCreatingDamageMacro"));
     }
   }
 

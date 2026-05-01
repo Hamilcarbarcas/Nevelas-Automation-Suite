@@ -1,5 +1,9 @@
 import { MODULE } from '../../../common/module.js';
 import { getDamageTypes } from '../../../common/settings/damageSettingsForms.js';
+import {
+  captureMirrorImageEffectNoteRoll,
+  prepareMirrorImageEffectNote
+} from '../buffs/mirrorImage.js';
 
 let _damageFootnoteHooksRegistered = false;
 let _attackFootnoteWrapperRegistered = false;
@@ -54,6 +58,7 @@ function registerAttackFootnoteRenderWrapper() {
     "pf1.actionUse.ChatAttack.prototype.setEffectNotesHTML",
     async function (wrapped, ...args) {
       try {
+        prepareMirrorImageEffectNote(this);
         const actionUse = this.actionUse;
         const shared = actionUse?.shared;
         const pendingByIndex = shared?.[ATTACK_FOOTNOTE_QUEUE_KEY];
@@ -78,7 +83,15 @@ function registerAttackFootnoteRenderWrapper() {
         console.error(`${MODULE.ID} | Failed injecting queued attack footnotes`, err);
       }
 
-      return wrapped(...args);
+      const result = await wrapped(...args);
+
+      try {
+        captureMirrorImageEffectNoteRoll(this);
+      } catch (err) {
+        console.error(`${MODULE.ID} | Failed capturing Mirror Image effect note roll`, err);
+      }
+
+      return result;
     },
     "WRAPPER"
   );
