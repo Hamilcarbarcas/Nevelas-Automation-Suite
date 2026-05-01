@@ -1,27 +1,29 @@
 import { MODULE } from '../../../../common/module.js';
-import { getNewHp, hasHpUpdate } from '../../utils/healthUpdates.js';
+import { getPrimaryHealthValue, hasPrimaryHealthUpdate } from '../../utils/healthUpdates.js';
+import { isWoundsVigorActive } from '../../utils/woundsVigor.js';
 
 export async function handleDeadOnUpdate(actorDocument, change) {
   const deadConditionSetting = game.settings.get(MODULE.ID, 'applyDeadCondition');
+  const isWv = isWoundsVigorActive(actorDocument);
 
-  if (deadConditionSetting !== 'none' && hasHpUpdate(change)) {
-    const newHp = getNewHp(actorDocument, change);
+  if (deadConditionSetting !== 'none' && hasPrimaryHealthUpdate(actorDocument, change)) {
+    const newHealth = getPrimaryHealthValue(actorDocument, change);
     const conScore = actorDocument.system.abilities.con.total;
     const isNPC = actorDocument.type === 'npc';
     
     let shouldApply = false;
     
     if (deadConditionSetting === 'everyone') {
-      shouldApply = newHp <= -conScore;
+      shouldApply = isWv ? newHealth <= 0 : newHealth <= -conScore;
     } else if (deadConditionSetting === 'npc' && isNPC) {
-      shouldApply = newHp <= -conScore;
+      shouldApply = isWv ? newHealth <= 0 : newHealth <= -conScore;
     } else if (deadConditionSetting === 'player' && !isNPC) {
-      shouldApply = newHp <= -conScore;
+      shouldApply = isWv ? newHealth <= 0 : newHealth <= -conScore;
     } else if (deadConditionSetting === 'player-negative-con-npc-negative-hp') {
       if (isNPC) {
-        shouldApply = newHp < 0;
+        shouldApply = isWv ? newHealth <= 0 : newHealth < 0;
       } else {
-        shouldApply = newHp <= -conScore;
+        shouldApply = isWv ? newHealth <= 0 : newHealth <= -conScore;
       }
     }
     
@@ -35,15 +37,15 @@ export async function handleDeadOnUpdate(actorDocument, change) {
   }
 
   const removeDeadSetting = game.settings.get(MODULE.ID, 'removeDeadCondition');
-  if (removeDeadSetting !== 'disabled' && hasHpUpdate(change) && actorDocument.statuses?.has?.('dead')) {
-    const newHp = getNewHp(actorDocument, change);
+  if (removeDeadSetting !== 'disabled' && hasPrimaryHealthUpdate(actorDocument, change) && actorDocument.statuses?.has?.('dead')) {
+    const newHealth = getPrimaryHealthValue(actorDocument, change);
     const conScore = actorDocument.system.abilities.con.total;
 
     let shouldRemove = false;
     if (removeDeadSetting === 'aboveNegativeCon') {
-      shouldRemove = newHp > -conScore;
+      shouldRemove = isWv ? newHealth > 0 : newHealth > -conScore;
     } else if (removeDeadSetting === 'nonNegative') {
-      shouldRemove = newHp >= 0;
+      shouldRemove = isWv ? newHealth > 0 : newHealth >= 0;
     }
 
     if (shouldRemove) {

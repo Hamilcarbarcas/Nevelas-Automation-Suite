@@ -1,5 +1,7 @@
 import { MODULE } from '../common/module.js';
+import { htmlElementFromRenderArg, onRenderChatMessageCompat } from '../common/foundryCompat.js';
 import { onRenderChatMessage } from '../features/buttons/healing.js';
+import { addPerAttackHealthModeChip } from '../features/buttons/healthModeChip.js';
 import { addClusteredShotsButton } from '../features/buttons/clusteredshots.js';
 import { handleCombatTrackerRender } from '../features/buttons/surpriseround.js';
 import { DamageCommands } from '../features/commands/damageCommands.js';
@@ -14,44 +16,67 @@ import { applyChatRangeOverrides, registerChatRangeHoverOverrides } from '../fea
 import { applyChatActivationOverrides } from '../features/automation/utils/chatActivationOverrides.js';
 import { registerPersistentSpellSaveOverrides } from '../features/automation/utils/chatSaveOverrides.js';
 import { applyEmpowerTooltipOverrides } from '../features/automation/metamagic/empowerSpell.js';
+import { registerDiceTooltipEnhancer } from '../features/automation/utils/diceTooltipEnhancer.js';
+import { registerHealthDeltaTextEnhancer } from '../features/automation/utils/healthDeltaText.js';
+import { registerSpellPerfectionCkl } from '../features/automation/metamagic/feats/spellPerfection.js';
 import { reorderTokenHUDConditions } from '../features/automation/utils/reorderTokenHUDConditions.js';
 import { registerConditions, setupConditionsI18n } from '../features/automation/conditions/registry.js';
 import { registerConditionFootnoteWrapper } from './conditionFootnoteWrappers.js';
 import { registerActionUseWrapper } from './actionUseWrappers.js';
+import { registerItemActionWrappers } from './itemActionWrappers.js';
 import { handleNauseatedPreActionUse, handleNauseatedPreConcentration } from '../features/automation/conditions/nauseated/nauseated.js';
 import { handleEntangledConcentration } from '../features/automation/conditions/entangled/entangled.js';
-import { handleSqueezingPreActionUse } from '../features/automation/conditions/squeezing/squeezing.js';
+import { handleSqueezingPreTokenUpdate, registerSqueezingTokenConfigFields } from '../features/automation/conditions/squeezing/squeezing.js';
+import { handleSqueezedPreActionUse } from '../features/automation/conditions/squeezed/squeezed.js';
 import { checkNextTokenFlatFooted, restoreFlatFootedTracker, updateFlatFootedTracker } from '../features/automation/conditions/flatfooted/flatfooted.js';
 import { handleDeadOnUpdate } from '../features/automation/conditions/dead/dead.js';
+import { handleDyingCombatUpdate, handleDyingOnUpdate, handleDyingPreActionUse } from '../features/automation/conditions/dying/dying.js';
 import { handleDisabledOnUpdate, handleDisabledStrenuousAction } from '../features/automation/conditions/disabled/disabled.js';
 import { handleEnergyDrainOnUpdate } from '../features/automation/conditions/energydrain/energydrain.js';
 import { handleGrappledActionUse, handleGrappledConcentration, handleGrappleResolution, isGrappleSelected } from '../features/automation/conditions/grappled/grappled.js';
 import { handleUnconsciousOnUpdate } from '../features/automation/conditions/unconscious/unconscious.js';
-import { registerLegacyDamageOverride } from '../features/automation/damage/legacyDamage.js';
+import { handleWoundsVigorActionTax } from '../features/automation/conditions/woundsvigor/actionTax.js';
+import { handleWoundsVigorThresholdSync } from '../features/automation/conditions/woundsvigor/thresholdSync.js';
 import { registerSystemApplyDamage } from '../features/automation/damage/systemApplyDamage.js';
 import { registerDamageSettingsHandlebarsHelpers } from '../common/settings/damageSettingsForms.js';
 import { registerDamageFootnoteHooks } from '../features/automation/damage/footnotes.js';
 import { hasHpUpdate } from '../features/automation/utils/healthUpdates.js';
 import { handleHtkCombatUpdate } from '../features/automation/utils/hardToKillCombat.js';
+import { registerTransmuterOfKoradaItemHook } from '../features/automation/metamagic/traits/index.js';
+
+function isConditionAutomationEnabled() {
+  const key = `${MODULE.ID}.automateConditions`;
+  if (!globalThis.game?.settings?.settings?.has?.(key)) return true;
+  return game.settings.get(MODULE.ID, "automateConditions");
+}
 
 export function registerNasModule() {
   Hooks.once("init", () => {
     registerDamageSettingsHandlebarsHelpers();
     registerDamageFootnoteHooks();
+    registerSqueezingTokenConfigFields();
     initializeConditionIds();
     registerConditionFootnoteWrapper(isGrappleSelected);
     registerActionUseWrapper();
+    registerItemActionWrappers();
     registerConcealedConditionWrappers();
+    registerConfusionChatMessageHook();
+    registerDiceTooltipEnhancer();
+    registerHealthDeltaTextEnhancer();
+    registerSpellPerfectionCkl();
+    registerTransmuterOfKoradaItemHook();
   });
 
-  Hooks.on("renderChatMessage", (app, html, data) => {
-    onRenderChatMessage(html);
-    addClusteredShotsButton(html);
-    registerConfusionChatMessageHook();
-    applyChatRangeOverrides(app, html);
-    applyChatActivationOverrides(app, html);
+  onRenderChatMessageCompat((app, html, data) => {
+    const root = htmlElementFromRenderArg(html);
+    if (!root) return;
+    addPerAttackHealthModeChip(root);
+    onRenderChatMessage(root);
+    addClusteredShotsButton(root);
+    applyChatRangeOverrides(app, root);
+    applyChatActivationOverrides(app, root);
     if (game.settings.get(MODULE.ID, "enableMetamagicAutomation")) {
-      applyEmpowerTooltipOverrides(html);
+      applyEmpowerTooltipOverrides(root);
     }
   });
 
@@ -69,11 +94,7 @@ export function registerNasModule() {
       .then(({ moduleConfig }) => moduleConfig.handleReadyHook())
       .catch((err) => console.error(`[${MODULE.ID}] Ready hook failed`, err));
 
-    const didRegisterSystemDamage = registerSystemApplyDamage();
-    if (!didRegisterSystemDamage) {
-      registerLegacyDamageOverride();
-    }
-
+    registerSystemApplyDamage();
     DamageCommands.initialize();
     initItemAttackFlagCopy();
   });
@@ -97,7 +118,13 @@ export function registerNasModule() {
     }
   });
 
+  Hooks.on('preUpdateToken', (tokenDocument, updateData, options, userId) => {
+    if (!isConditionAutomationEnabled()) return;
+    return handleSqueezingPreTokenUpdate(tokenDocument, updateData, options, userId);
+  });
+
   Hooks.on('combatStart', async (combat) => {
+    if (!isConditionAutomationEnabled()) return;
     restoreFlatFootedTracker(combat);
 
     const turnOrder = combat.turns;
@@ -125,6 +152,7 @@ export function registerNasModule() {
   });
 
   Hooks.on('updateCombat', async (combat, update, options, userId) => {
+    const conditionAutomationEnabled = isConditionAutomationEnabled();
     const startupShortCircuit = (((combat.previous?.round === combat.current?.round) || (combat.previous?.round === 0)) &&
       ((combat.previous?.turn === combat.current?.turn) || (combat.previous?.turn === null)) &&
       (combat.previous?.tokenId === combat.turns[0]?.tokenId || combat.previous?.tokenId === null)
@@ -134,7 +162,7 @@ export function registerNasModule() {
     const hasRoundUpdate = update?.round !== undefined && update?.round !== null;
     const isTurnOrRoundUpdate = hasTurnUpdate || hasRoundUpdate;
 
-    if (game.user.isGM && userId === game.user.id && isTurnOrRoundUpdate && options?.nasSurpriseSkip !== true) {
+    if (conditionAutomationEnabled && game.user.isGM && userId === game.user.id && isTurnOrRoundUpdate && options?.nasSurpriseSkip !== true) {
       const didSkip = await skipIneligibleSurpriseCombatants(combat);
       if (didSkip) return;
     }
@@ -157,10 +185,15 @@ export function registerNasModule() {
 
       if (game.user.isGM) {
         handleCombatTurn(combat, combatData);
-        updateFlatFootedTracker(combat);
-        handleHtkCombatUpdate(combat, update);
+        if (conditionAutomationEnabled) {
+          updateFlatFootedTracker(combat);
+          handleHtkCombatUpdate(combat, update);
+          await handleDyingCombatUpdate(combat, update);
+        }
       } else if (!game.user.isGM) {
-        checkNextTokenFlatFooted(combat, combatData);
+        if (conditionAutomationEnabled) {
+          checkNextTokenFlatFooted(combat, combatData);
+        }
       }
     }
   });
@@ -180,6 +213,7 @@ export function registerNasModule() {
   });
 
   Hooks.on('updateActor', async (actorDocument, change, options, userId) => {
+    if (!isConditionAutomationEnabled()) return;
     if (!actorDocument.isOwner) return;
 
     let ownerUsers = game.users.filter(u => actorDocument.testUserPermission(u, 'OWNER'));
@@ -198,21 +232,28 @@ export function registerNasModule() {
     await handleDisabledOnUpdate(actorDocument, change);
     await handleEnergyDrainOnUpdate(actorDocument, change);
     await handleUnconsciousOnUpdate(actorDocument, change, options);
+    await handleDyingOnUpdate(actorDocument, change);
     await handleDeadOnUpdate(actorDocument, change);
+    await handleWoundsVigorThresholdSync(actorDocument, change);
   });
 
   Hooks.on("pf1PreActionUse", async (action) => {
+    if (!isConditionAutomationEnabled()) return;
     handleGrappledActionUse(action);
     handleNauseatedPreActionUse(action);
-    handleSqueezingPreActionUse(action);
+    handleSqueezedPreActionUse(action);
+    handleDyingPreActionUse(action);
   });
 
   Hooks.on('pf1PreActorRollConcentration', (actor, rollContext) => {
+    if (!isConditionAutomationEnabled()) return;
     return handleNauseatedPreConcentration(rollContext);
   });
 
   Hooks.on("pf1PostActionUse", async (action) => {
+    if (!isConditionAutomationEnabled()) return;
     await handleGrappleResolution(action);
+    await handleWoundsVigorActionTax(action);
 
     if (game.settings.get(MODULE.ID, 'disableAtZeroHP') ||
       game.settings.get(MODULE.ID, 'entangledGrappledHandling') !== 'disabled'

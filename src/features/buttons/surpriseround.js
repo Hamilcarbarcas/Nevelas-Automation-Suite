@@ -1,4 +1,5 @@
 import { MODULE } from '../../common/module.js';
+import { elementFromHtmlLike, isFoundryV13Plus } from '../../common/foundryCompat.js';
 
 const SURPRISED_FLAG = "surprisedInSurpriseRound";
 const SURPRISE_TOGGLE_SELECTOR = '[data-action="nas-toggle-surprise-eligible"]';
@@ -26,11 +27,14 @@ function updateEligibilityButtonState(button, surprised) {
 
 export function handleCombatTrackerRender(app, html, data) {
   if (!game.settings.get(MODULE.ID, 'autoApplyFF')) return;
+  html = elementFromHtmlLike(html);
+  if (!html) return;
   const surpriseSelector = '[data-control="nas-surprise-round"]';
   const surprisedLabel = localizeWithFallback("NAS.combat.buttons.surprised.name", "Surprised");
   const surprisedTooltip = localizeWithFallback("NAS.combat.buttons.surprised.tooltip", "Surprised");
   const surpriseRoundLabel = localizeWithFallback("NAS.combat.buttons.surpriseRound.name", game.i18n.localize('NAS.conditions.main.SurpriseRound'));
   const surpriseRoundTooltip = localizeWithFallback("NAS.combat.buttons.surpriseRound.tooltip", surpriseRoundLabel);
+  const useV13Controls = isFoundryV13Plus();
   if (!data.combat) {
     if (typeof html.find === 'function') {
       html.find(surpriseSelector).remove();
@@ -56,9 +60,12 @@ export function handleCombatTrackerRender(app, html, data) {
 
         const surprised = isCombatantMarkedSurprised(combatant);
         const btn = $(
-          `<button type="button" class="inline-control combatant-control icon fa-solid fa-person-falling-burst" data-action="nas-toggle-surprise-eligible" data-tooltip="${surprisedTooltip}" aria-label="${surprisedLabel}" title="${surprisedTooltip}"></button>`
+          `<a class="combatant-control" data-action="nas-toggle-surprise-eligible" data-tooltip="${surprisedTooltip}" aria-label="${surprisedLabel}" title="${surprisedTooltip}" role="button">
+            <i class="fa-solid fa-person-falling-burst"></i>
+          </a>`
         );
-        btn.prop("disabled", !canEditEligibility);
+        btn.toggleClass("disabled", !canEditEligibility);
+        btn.attr("aria-disabled", canEditEligibility ? "false" : "true");
         btn.on("click.nas", async (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
@@ -85,14 +92,23 @@ export function handleCombatTrackerRender(app, html, data) {
         controls.querySelectorAll(SURPRISE_TOGGLE_SELECTOR).forEach((b) => b.remove());
 
         const surprised = isCombatantMarkedSurprised(combatant);
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "inline-control combatant-control icon fa-solid fa-person-falling-burst";
+        const btn = useV13Controls ? document.createElement("button") : document.createElement("a");
+        if (useV13Controls) {
+          btn.type = "button";
+          btn.className = "inline-control combatant-control icon fa-solid fa-person-falling-burst";
+          btn.disabled = !canEditEligibility;
+        } else {
+          const referenceControl = controls.querySelector("a.combatant-control, .combatant-control");
+          btn.className = referenceControl?.className || "combatant-control";
+          btn.setAttribute("role", "button");
+          btn.classList.toggle("disabled", !canEditEligibility);
+          btn.setAttribute("aria-disabled", canEditEligibility ? "false" : "true");
+          btn.innerHTML = '<i class="fa-solid fa-person-falling-burst"></i>';
+        }
         btn.dataset.action = "nas-toggle-surprise-eligible";
         btn.dataset.tooltip = surprisedTooltip;
         btn.setAttribute("aria-label", surprisedLabel);
         btn.title = surprisedTooltip;
-        btn.disabled = !canEditEligibility;
         btn.addEventListener("click", async (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
@@ -139,7 +155,6 @@ export function handleCombatTrackerRender(app, html, data) {
   }
 
   if (data.combat?.current?.round === 0 && game.user.isGM) {
-    const surpriseRoundLabel = game.i18n.localize('NAS.conditions.main.SurpriseRound');
     const surpriseSelector = '[data-control="nas-surprise-round"]';
 
     const resetExemptFlags = async (combat) => {
@@ -172,63 +187,70 @@ export function handleCombatTrackerRender(app, html, data) {
     let surpriseRoundButton;
 
     if (typeof html.find === 'function') {
-      const placeholderNav = html.find('nav.combat-controls.add-placeholder');
-      const footerNav = html.find('nav.combat-controls[data-application-part="footer"]');
-      const baseControls = placeholderNav.length ? placeholderNav : footerNav.length ? footerNav : html.find('.combat-controls').first();
-
-      baseControls.css('flex-direction', 'column');
-
       html.find(surpriseSelector).remove();
       surpriseRoundButton = $(
-        `<a class="combat-control" data-control="nas-surprise-round" aria-label="${surpriseRoundLabel}" role="button">
+        `<a class="combat-control" data-control="nas-surprise-round" data-tooltip="${surpriseRoundTooltip}" aria-label="${surpriseRoundLabel}" role="button">
           ${surpriseRoundLabel}
         </a>`
       );
 
-      if (placeholderNav.length) {
-        placeholderNav.append(surpriseRoundButton);
-      } else {
-        const beginCombatButton = footerNav.find('a[data-control="startCombat"], button[data-action="startCombat"]');
-        if (beginCombatButton.length) {
-          beginCombatButton.before(surpriseRoundButton);
-        } else {
-          baseControls.prepend(surpriseRoundButton);  
-        }
+      const beginCombatButton = html.find('a[data-control="startCombat"], button[data-action="startCombat"]').first();
+      if (beginCombatButton.length) {
+        beginCombatButton.before(surpriseRoundButton);
       }
 
       surpriseRoundButton.off('.nas').on('click.nas', handleSurpriseClick);
     } else {
-      const placeholderNav = html.querySelector('nav.combat-controls.add-placeholder');
-      const footerNav = html.querySelector('nav.combat-controls[data-application-part="footer"]');
-      const baseControls = placeholderNav ?? footerNav ?? html.querySelector('.combat-controls');
-
-      if (baseControls) baseControls.style.flexDirection = 'column';
-
       html.querySelectorAll(surpriseSelector).forEach(btn => btn.remove());
-      surpriseRoundButton = document.createElement('button');
-      surpriseRoundButton.classList.add('combat-control');
-      surpriseRoundButton.setAttribute('aria-label', surpriseRoundLabel);
-      surpriseRoundButton.dataset.control = 'nas-surprise-round';
-      surpriseRoundButton.type = 'button';
-      surpriseRoundButton.textContent = surpriseRoundLabel;
 
-      if (placeholderNav) {
-        placeholderNav.appendChild(surpriseRoundButton); 
-      } else if (footerNav) {
-        const beginCombatButton = footerNav.querySelector('button[data-action="startCombat"], a[data-control="startCombat"]');
-        if (beginCombatButton && beginCombatButton.parentNode) {
-          beginCombatButton.parentNode.insertBefore(surpriseRoundButton, beginCombatButton);
-        } else {
-          footerNav.insertBefore(surpriseRoundButton, footerNav.firstChild);
+      if (useV13Controls) {
+        const placeholderNav = html.querySelector('nav.combat-controls.add-placeholder');
+        const footerNav = html.querySelector('nav.combat-controls[data-application-part="footer"]');
+        const baseControls = placeholderNav ?? footerNav ?? html.querySelector('.combat-controls');
+        if (baseControls) baseControls.style.flexDirection = 'column';
+
+        surpriseRoundButton = document.createElement('button');
+        surpriseRoundButton.classList.add('combat-control');
+        surpriseRoundButton.setAttribute('aria-label', surpriseRoundLabel);
+        surpriseRoundButton.dataset.tooltip = surpriseRoundTooltip;
+        surpriseRoundButton.dataset.control = 'nas-surprise-round';
+        surpriseRoundButton.type = 'button';
+        surpriseRoundButton.textContent = surpriseRoundLabel;
+
+        if (placeholderNav) {
+          placeholderNav.appendChild(surpriseRoundButton); 
+        } else if (footerNav) {
+          const beginCombatButton = footerNav.querySelector('button[data-action="startCombat"], a[data-control="startCombat"]');
+          if (beginCombatButton && beginCombatButton.parentNode) {
+            beginCombatButton.parentNode.insertBefore(surpriseRoundButton, beginCombatButton);
+          } else {
+            footerNav.insertBefore(surpriseRoundButton, footerNav.firstChild);
+          }
+        } else if (baseControls) {
+          baseControls.insertBefore(surpriseRoundButton, baseControls.firstChild);
         }
-      } else if (baseControls) {
-        baseControls.insertBefore(surpriseRoundButton, baseControls.firstChild);
+      } else {
+        const startCombatButton = html.querySelector('button[data-action="startCombat"], a[data-control="startCombat"]');
+        surpriseRoundButton = document.createElement('a');
+        surpriseRoundButton.className = startCombatButton?.className || 'combat-control';
+        surpriseRoundButton.setAttribute('role', 'button');
+        surpriseRoundButton.setAttribute('aria-label', surpriseRoundLabel);
+        surpriseRoundButton.dataset.tooltip = surpriseRoundTooltip;
+        surpriseRoundButton.dataset.control = 'nas-surprise-round';
+        surpriseRoundButton.textContent = surpriseRoundLabel;
+
+        if (startCombatButton?.parentNode) {
+          if (startCombatButton.parentElement) {
+            startCombatButton.parentElement.style.flexDirection = 'column';
+          }
+          startCombatButton.parentNode.insertBefore(surpriseRoundButton, startCombatButton);
+        }
       }
 
       surpriseRoundButton.addEventListener('click', handleSurpriseClick);
     }
 
-    if (typeof combatControls.on === 'function') {
+    if (combatControls && typeof combatControls.on === 'function') {
       combatControls.on('click', 'a[data-control="startCombat"]', async () => {
         const isSurprise = data.combat?.getFlag(MODULE.ID, 'isSurprise') || false;
         await resetExemptFlags(data.combat);
@@ -236,7 +258,7 @@ export function handleCombatTrackerRender(app, html, data) {
           await data.combat?.setFlag(MODULE.ID, 'isSurprise', false);
         }
       });
-    } else {
+    } else if (combatControls) {
       const startCombatButton = combatControls.querySelector('button[data-action="startCombat"]');
       if (startCombatButton) {
         startCombatButton.addEventListener('click', async () => {
@@ -247,9 +269,15 @@ export function handleCombatTrackerRender(app, html, data) {
           }
         });
       }
+    } else if (!useV13Controls) {
+      const startCombatButton = html.querySelector('button[data-action="startCombat"], a[data-control="startCombat"]');
+      startCombatButton?.addEventListener('click', async () => {
+        const isSurprise = data.combat?.getFlag(MODULE.ID, 'isSurprise') || false;
+        await resetExemptFlags(data.combat);
+        if (isSurprise) {
+          await data.combat?.setFlag(MODULE.ID, 'isSurprise', false);
+        }
+      });
     }
   }
 }
-
-
-

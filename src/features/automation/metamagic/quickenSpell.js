@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "quickenSpell",
   name: "Quicken Spell",
-  prefix: "Quicken",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.quickenSpell") ?? "Quicken"; },
 };
 
 export const QUICKEN_SPELL_NAME = METAMAGIC_DEFINITION.name;

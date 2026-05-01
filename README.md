@@ -46,10 +46,12 @@ Automatically applies buffs when spells, consumables, or class features are used
 Adds additional PF1E conditions and automates behavior for many conditions to keep combat moving quickly and consistently.
 
 ### Added Conditions
-- **Concealment**
+- **Burning**
+- **Concealed**
 - **Energy Drained**
 - **Fascinated**
 - **Grappling**
+- **Squeezed**
 
 ### Sub-Conditions
 - **Anchored**: Applies a movement restriction on tokens (immovable)
@@ -60,11 +62,12 @@ These sub-conditions work with other conditions like **entangled**, **grappled**
 
 ### Automated Behaviors (Toggleable Where Noted)
 - **Anchored**: Applies a movement restriction on tokens, making them immovable; automatically applied to conditions like *cowering, dazed, dying, helpless, paralyzed, petrified, pinned*. (Toggleable in settings.)
-- **Blind**: Applies the **slowed** sub-condition; movement prompts an Acrobatics check—failure results in no movement and the **prone** condition. (Toggleable.)
-- **Concealment**: When Concealment is applied, the user will be prompted to select between the normal or total concealment. Upon selection, the token will receive a buff which will determine footnotes on attack actions. Currently it supports the Blind-Fight feat.
+- **Blind**: Moving a token more than half its speed prompts an Acrobatics check—failure results in no movement and the **prone** condition. (Toggleable.)
+- **Concealed**: When Concealment is applied, the user will be prompted to select between the normal or total concealment. Currently it supports the Blind-Fight feat.
 - **Confused**: Creates a chat message every round showing how affected tokens act. During combat, posts on the affected token’s turn. Includes proper damage application compatibility with damage automation. (Toggleable.)
 - **Dead**: Applied automatically when HP is ≤ total Constitution score; can be toggled off and disables Monk’s Combat Detail’s similar setting for compatibility.
 - **Disabled**: Applied automatically when HP is exactly 0; prompts user decisions for actions and condition changes based on abilities like Diehard. (Toggleable.)
+- **Dying**: Applied automatically at negative hp (but not dead). On the creature's turn, it rolls a constitution check automatically with a DC of 10 + a penalty equal to the negative HP.
 - **Energy Drained**: Automatically applied to tokens with above 0 negative levels. (Toggleable.)
 - **Entangled**: Applies **slowed** automatically and prompts concentration checks for spellcasting. (Toggleable.)
 - **Fascinated**: Applies a **-4 penalty** on Perception checks.
@@ -72,15 +75,19 @@ These sub-conditions work with other conditions like **entangled**, **grappled**
 - **Grappled**: The token is immobile. Prompts concentration checks for spellcasting with somatic components. (Toggleable.)
 - **Grappling**: A grapple checkbox will be attack to your attack dialogs. When used with a target, the module will process your roll and the target's CMD and apply grappling on the attacker and grapple and the defender upon success.
 - **Immobilized**: Sub-condition that renders the token immovable and denies Dex bonus to AC. (Toggleable.)
-- **Slowed**: Sub-condition applied automatically to tokens with conditions like *blind, disabled, entangled, exhausted*.
-- **Unconscious**: Applied automatically when tokens fall below 0 HP, unless affected by abilities like Diehard.
+- **Invisible**: Applies Total Concealment automatically as a sub-condition.
+- **Prone**: Applied automatically when certain conditions are met like falling unconscious and blind movement check failure.
+- **Slowed**: Sub-condition applied automatically to tokens with conditions like *disabled, entangled, exhausted, and grappling*.
+- **Staggered**: Applies automatically when the token has taken nonlethal damage equal to the token's current HP.
+- **Squeezed / Squeezing**: Applied automatically when the token is entering a narrow area (wall based). When attempting to enter an area smaller by more than half of the token's width, the module automatically rolls for Escape Artist with a DC of 30 and upon success the token is moved into the area, upon failure the token moves to the square before the narrow area's entry. By default, each token has a base body width and a base head width. These percentage based values for width and the DC can be modified in the module settings and the token settings.
+- **Unconscious**: Applied automatically when tokens fall below 0 HP, unless affected by abilities like Diehard. Also applied automatically when the token has taken nonlethal damage equal to more than the token's current HP.
 
 ### Surprise Rounds
 Surprise Rounds are available only if the **Flat-Footed** setting is enabled.
 
-- Start a surprise round by clicking the **“Surprise Round”** button above **“Begin Combat”**
-- Applies **Flat-Footed** to all tokens until their turns in the second round
-- To exclude tokens from being surprised, select them before clicking the button
+- Start a surprise round by clicking the **“Surprise Round”** button above **“Begin Combat”**.
+- Applies **Flat-Footed** to all tokens until their turns in the second round.
+- To exclude tokens from being surprised, select them or toggle the new <span><img src="https://github.com/user-attachments/assets/0f2cb882-8a1e-46c5-8542-5a6fde928bfd" width="23"></span> icon on the before clicking the "Surprise Round" button.
 
 ---
 
@@ -234,6 +241,21 @@ Because ammunition does not have material/enhancement fully supported by the PF1
 
 ---
 
+### Reactive Effects (On Hit / On Struck)
+
+- On the item sheet (details tab) \ action sheet (action tab) you will find a "On Hit" section with a checkbox for items that have damage actions. Checking it opens configuration that allows you to configure special effects when the attack hits the target (when damage is applied), such as lifesteal or applying a buff or condition to the attacker or the target.
+- Similarly, on items such as armor or buffs, you will find a "On Struck" section with a checkbox. Checking it opens configuration that allows you to configure similar effects that happen when that token \ actor is struck.
+
+> This allows you to configure things like the fire shield spell.
+
+---
+
+### Wounds & Vigor
+
+- The module has a setting to toggle on wounds and vigor support. This is dependent on the system setting as well. When both are enabled, the module handles damage as the Wounds & Vigor rules. The module also includes a house rule for construct and undead creatures.
+
+---
+
 ## Metamagic Automation
 
 Adds a metamagic picker to spell dialogs and automatically applies supported metamagic adjustments at cast time—reducing manual edits to spell data, DCs, ranges, and damage formulas.
@@ -255,27 +277,6 @@ Adds a metamagic picker to spell dialogs and automatically applies supported met
 
 ### Supported Metamagics
 
-- **Still Spell**
-  - Removes somatic components.
-- **Silent Spell**
-  - Removes verbal components.
-  - **Blocked for bard spells** (warns and skips).
-- **Extend Spell**
-  - Doubles duration (excludes concentration, instantaneous, and permanent durations).
-- **Reach Spell**
-  - Steps range upward (**Touch → Close → Medium → Long**).
-  - Prompts you to choose how many steps to apply.
-  - Converts melee spell attacks (**msak**) to ranged spell attacks (**rsak**) when applicable.
-- **Quicken Spell**
-  - Sets casting time to **swift**.
-- **Selective Spell**
-  - For **instantaneous area** spells, prompts you to exclude targets.
-  - Max exclusions are based on your spellcasting ability modifier for the spellbook.
-- **Heighten Spell**
-  - Prompts for a target spell level and updates effective spell level (and DC) accordingly.
-- **Persistent Spell**
-  - Adds a reminder footnote and upgrades the chat save workflow:
-    - On a successful save, automatically rolls the **second** save.
 - **Dazing Spell**
   - Requires a damaging spell.
   - Ensures the spell has a save button (defaults to **Will** only if the spell has no save).
@@ -283,10 +284,68 @@ Adds a metamagic picker to spell dialogs and automatically applies supported met
 - **Empower Spell**
   - Applies 1.5× damage (rounded down) by rewriting damage formulas.
   - Preserves readable roll tooltips for empowered rolls.
-- **Maximize Spell**
-  - Converts damage dice into maximum results by rewriting dice expressions.
+- **Enlarge Spell**
+  - Increases the range of spells with the close, medium, or long categories by 100% (excludes other range values).
+- **Extend Spell**
+  - Doubles duration (excludes concentration, instantaneous, and permanent durations).
+- **Heighten Spell**
+  - Prompts for a target spell level and updates effective spell level (and DC) accordingly.
 - **Intensified Spell**
   - Increases common caster-level-based damage caps by **+5** (up to caster level), where applicable.
+- **Maximize Spell**
+  - Converts damage dice into maximum results by rewriting dice expressions.
+- **Persistent Spell**
+  - Adds a reminder footnote and upgrades the chat save workflow:
+    - On a successful save, automatically rolls the **second** save.
+- **Reach Spell**
+  - Steps range upward (**Touch → Close → Medium → Long**).
+  - Prompts you to choose how many steps to apply.
+  - Converts melee spell attacks (**msak**) to ranged spell attacks (**rsak**) when applicable.
+- **Selective Spell**
+  - For **instantaneous area** spells, prompts you to exclude targets.
+  - Max exclusions are based on your spellcasting ability modifier for the spellbook.
+- **Silent Spell**
+  - Removes verbal components.
+- **Still Spell**
+  - Removes somatic components.
+  - **Blocked for bard spells** (warns and skips).
+- **Quicken Spell**
+  - Sets casting time to **swift**.
+
+---
+
+### Support for over 20 Class Features \ Feats \ Traits
+
+- **Full List of supported items**:
+  Arcane Apotheosis
+  Arcane Bloodline
+  Arcane Prodigy (Drow)
+  Curator of Mystic Secrets
+  Eldritch Researcher
+  Extended Scrying
+  Grand Maestro
+  Healer's Blessing
+  Intense Celebration
+  Magical Lineage
+  Maleficium
+  Mask Focus
+  Metamagic Adept
+  Metamagic Mastery
+  Metamixing
+  Mimic Metamagic
+  Nanite Bloodline
+  One Body
+  Two Minds
+  Peerless Speed
+  Prolong Magic (Tiefling)
+  Retribution
+  Seeker of the Eternal Emperor
+  Spell Perfection
+  Spontaneous Metafocus
+  Succor Final Revelation
+  Timeless Soul
+  Transmuter of Korada
+  Wayang Spellhunter (Minata)
 
 ---
 
@@ -307,6 +366,26 @@ Adds a metamagic picker to spell dialogs and automatically applies supported met
 - **Persistent Spell Targets**
   - Controls how targets are determined when using the **chat save button** for Persistent/Dazing workflows:
     - current user targets / selected tokens / targets stored on the chat card
+
+---
+
+## Quality of Life
+
+### On Card Save
+
+- When an action that has a save is used, the chat card typically is created with a save button. The module adds an optional setting that allows you to add an interactable and clickable icon of the token that is making the save. This helps when using a the save button while selection multiple tokens that have the same name and icon such as NPCs.
+
+### Enhanced Dice Tooltips
+
+- This setting changes how the system shows unlabeled modifiers in the roll tooltips. When certain variables are available (such as caster level), it will show that bonus and label them appropriately. If a bonus is added but the module could not label it, it will be labeled as "bonus".
+
+### Combat Text
+
+- This setting causes the floating combat text to change how it moves and looks.
+
+### Enforce Spell Ability Minimum
+
+- This setting enforces the PF1E rule where you have to have a casting ability score of 10 + spell level to be able to cast spells of certain level. While the system already handles it partially, this setting also completely hides those spell levels from the actor sheet when the casting ability score is too low.
 
 ---
 

@@ -92,6 +92,28 @@ function parseMetamagicOptions(formData) {
   }
 }
 
+function parseTraitOptions(formData) {
+  const raw = formData?.traitOptions;
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((value) => `${value}`).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseFeatOptions(formData) {
+  const raw = formData?.featOptions;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function collectSpellActionData(action) {
   const rollData = action.shared?.rollData ?? {};
   const duration = action.action?.duration ?? action.item?.system?.duration ?? {};
@@ -109,12 +131,17 @@ export async function collectSpellActionData(action) {
   const templateSize = Number(action.action?.measureTemplate?.size || 0);
   const isAreaOfEffect = !!areaString || (measureTemplateEnabled && templateSize > 5);
 
+  const metamagicNames = parseMetamagicNames(action.formData);
+  const metamagicOptions = parseMetamagicOptions(action.formData);
+
   return {
     actor: action.actor ?? action.token?.actor ?? null,
     item: action.item ?? null,
     formData: action.formData ?? {},
-    metamagicNames: parseMetamagicNames(action.formData),
-    metamagicOptions: parseMetamagicOptions(action.formData),
+    metamagicNames,
+    metamagicOptions,
+    traitOptions: parseTraitOptions(action.formData),
+    featOptions: parseFeatOptions(action.formData),
     duration: {
       value: duration.value ?? "",
       units: duration.units ?? "",

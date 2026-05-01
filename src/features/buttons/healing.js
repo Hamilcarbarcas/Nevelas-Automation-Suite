@@ -1,13 +1,14 @@
 import { MODULE } from '../../common/module.js';
+import { elementFromHtmlLike } from '../../common/foundryCompat.js';
+import { getHealthModeForElement } from './healthModeChip.js';
 
 const MARK_ATTR = "data-nas-healing-extra";
 const HOVER_ATTR = "data-nas-healing-hover";
 const ROOT_HOVER_ATTR = "data-nas-healing-root-hover";
 
 export function onRenderChatMessage(html) {
-    const root = (typeof jQuery !== 'undefined' && html instanceof jQuery) ? html[0] : html;
+    const root = elementFromHtmlLike(html);
     if (!(root instanceof HTMLElement)) return;
-
     bindRootHoverHandlers(root);
     addInlineExtras(root);
     addSimpleDamageExtras(root);
@@ -149,6 +150,7 @@ function bindHealingClick(extraEl) {
         if (!Number.isFinite(value) || value === 0) return;
 
         try {
+            const asWounds = getHealthModeForElement(extraEl) === "wounds";
             const applyOptions = {
                 targets: context.targets,
                 message: context.message,
@@ -157,7 +159,8 @@ function bindHealingClick(extraEl) {
                 ratio,
                 element: extraEl,
                 event: ev,
-                nasHealing: true
+                nasHealing: true,
+                asWounds
             };
             await pf1?.documents?.actor?.ActorPF?.applyDamage?.(value, applyOptions);
         } catch (err) {

@@ -1,12 +1,45 @@
 import { MODULE } from '../common/module.js';
+import { chatMessageStyle } from '../common/foundryCompat.js';
 import { applyBuffToTargets } from '../features/automation/buffs/buffs.js';
+import {
+    applyMirrorImageStateSocket,
+    undoMirrorImageOperationSocket
+} from '../features/automation/buffs/mirrorImage.js';
 
 export let socket;
+
+function localizeSockets(path) {
+    return game.i18n.localize(`NAS.integration.sockets.${path}`);
+}
+
+function formatSockets(path, data = {}) {
+    return game.i18n.format(`NAS.integration.sockets.${path}`, data);
+}
+
+function isConditionAutomationEnabled() {
+    const key = `${MODULE.ID}.automateConditions`;
+    if (!globalThis.game?.settings?.settings?.has?.(key)) return true;
+    return game.settings.get(MODULE.ID, "automateConditions");
+}
+
+async function applyPlayerDamageWithAutomation(actor, value, options = {}) {
+    if (actor) {
+        const { applyNasHeadlessDamage } = await import('../features/automation/damage/systemApplyDamage.js');
+        const applied = await applyNasHeadlessDamage(value, { ...options, targets: [actor], forceDialog: false });
+        if (applied?.handled) return applied.result;
+    }
+
+    const Ctor = pf1?.documents?.actor?.ActorPF;
+    if (!actor || Ctor == null || typeof Ctor.applyDamage !== "function") {
+        return actor?.applyDamage?.(value, options);
+    }
+    return Ctor.applyDamage(value, { ...options, targets: [actor], forceDialog: false });
+}
 
 export function initializeSockets() {
     if (!game.modules.get("socketlib")?.active) {
         if (game.settings.get(MODULE.ID, "massiveDamage")) {
-            ui.notifications.warn("SocketLib is required for the Massive Damage rule to work properly. Please install and activate the socketlib module.");
+            ui.notifications.warn(localizeSockets("warnings.socketLibRequired"));
         }
         return;
     }
@@ -23,6 +56,11 @@ export function initializeSockets() {
     socket.register("applyGrappleToTarget", applyGrappleToTarget);
     socket.register("handleFlatFootedRemoval", handleFlatFootedRemoval);
     socket.register("applyBuffToTargetsSocket", applyBuffToTargetsSocket);
+    socket.register("applyReactiveDamageToActorSocket", applyReactiveDamageToActorSocket);
+    socket.register("toggleReactiveConditionSocket", toggleReactiveConditionSocket);
+    socket.register("toggleReactiveBuffSocket", toggleReactiveBuffSocket);
+    socket.register("setMirrorImageBuffStateSocket", applyMirrorImageStateSocket);
+    socket.register("undoMirrorImageOperationSocket", undoMirrorImageOperationSocket);
 }
 
 function getHtkWhisperTargets() {
@@ -128,16 +166,127 @@ export function getPreferredOwnerUserId(actor) {
         const activeOwners = ownerUsers.filter(u => u.active);
         if (activeOwners.length > 0) return activeOwners[0].id;
     } catch (_err) {
-        // ignore
     }
     const activeGm = game.users.find(u => u.active && u.isGM);
     return activeGm?.id ?? null;
 }
 
+async function resolveActorByUuid(actorUuid) {
+    if (!actorUuid) return null;
+    try {
+        if (typeof fromUuid === "function") {
+            const actorDoc = await fromUuid(actorUuid);
+            if (actorDoc) return actorDoc;
+        }
+    } catch (_err) {
+    }
+    if (String(actorUuid).includes(".Token.")) {
+        return null;
+    }
+    const m = String(actorUuid).match(/^Actor\.([^.]+)$/i);
+    if (m) {
+        return game.actors?.get?.(m[1]) ?? null;
+    }
+    return null;
+}
+
+function findActorBuffBySource(actor, buffUuid) {
+    if (!actor || !buffUuid) return null;
+    return actor.items?.find?.((item) => {
+        if (item.type !== "buff") return false;
+        const source = item.flags?.[MODULE.ID]?.sourceId || item.flags?.core?.sourceId || item._stats?.compendiumSource;
+        return source === buffUuid;
+    }) ?? null;
+}
+
+async function resolveBuffDocumentByUuid(buffUuid) {
+    if (!buffUuid) return null;
+    try {
+        const doc = await fromUuid(buffUuid);
+        return doc?.type === "buff" ? doc : null;
+    } catch (_err) {
+        return null;
+    }
+}
+
+async function setReactiveBuffState(actorUuid, buffUuid, enabled) {
+    const actor = await resolveActorByUuid(actorUuid);
+    if (!actor) return false;
+
+    const existingBuff = findActorBuffBySource(actor, buffUuid);
+    if (existingBuff) {
+        await existingBuff.update({ "system.active": enabled === true });
+        return true;
+    }
+
+    if (enabled !== true) return false;
+
+    const buffDoc = await resolveBuffDocumentByUuid(buffUuid);
+    if (!buffDoc) return false;
+
+    let buffData;
+    if (buffDoc.pack && typeof Item?.implementation?.fromCompendium === "function") {
+        buffData = await Item.implementation.fromCompendium(buffDoc);
+    } else if (buffDoc.pack && typeof Item?.fromCompendium === "function") {
+        buffData = await Item.fromCompendium(buffDoc);
+    } else {
+        buffData = buffDoc.toObject();
+    }
+
+    buffData.flags = buffData.flags || {};
+    buffData.flags[MODULE.ID] = buffData.flags[MODULE.ID] || {};
+    buffData.flags[MODULE.ID].sourceId = buffUuid;
+    buffData.system = buffData.system || {};
+    buffData.system.active = true;
+
+    await actor.createEmbeddedDocuments("Item", [buffData]);
+    return true;
+}
+
+export async function applyReactiveDamageToActor(actor, value, options = {}) {
+    if (!actor || !Number.isFinite(Number(value))) return;
+    const amount = Number(value);
+    if (amount === 0) return;
+
+    const canModify = game.user?.isGM || actor?.isOwner;
+    if (!canModify) {
+        if (!socket) return;
+        await socket.executeAsGM("applyReactiveDamageToActorSocket", actor.uuid, amount, options);
+        return;
+    }
+    return applyPlayerDamageWithAutomation(actor, amount, options);
+}
+
+export async function toggleReactiveCondition(actor, conditionId, enabled) {
+    if (!actor || !conditionId) return;
+    const canModify = game.user?.isGM || actor?.isOwner;
+    if (!canModify) {
+        if (!socket) return;
+        await socket.executeAsGM("toggleReactiveConditionSocket", actor.uuid, String(conditionId), enabled === true);
+        return;
+    }
+    await actor.setCondition?.(String(conditionId), enabled === true);
+}
+
+export async function toggleReactiveBuff(actor, buffUuid, enabled) {
+    if (!actor || !buffUuid) return;
+    const canModify = game.user?.isGM || actor?.isOwner;
+    if (!canModify) {
+        if (!socket) return;
+        await socket.executeAsGM("toggleReactiveBuffSocket", actor.uuid, String(buffUuid), enabled === true);
+        return;
+    }
+    await setReactiveBuffState(actor.uuid, String(buffUuid), enabled === true);
+}
 
 async function rollMassiveDamageSave(actorId, damageAmount, threshold) {
     const actor = game.actors.get(actorId);
-    if (!actor) return { name: "Unknown", result: "No actor found" };
+    if (!actor) {
+        return {
+            name: localizeSockets("results.unknownName"),
+            result: localizeSockets("results.noActorFound")
+        };
+    }
 
     const roll = await actor.rollSavingThrow("fort", { dc: 15 });
     
@@ -146,21 +295,28 @@ async function rollMassiveDamageSave(actorId, damageAmount, threshold) {
         total = roll.rolls[0].total || 0;
     }
     
+    console.log("Massive damage save roll result:", total);
     const success = total >= 15;
     
     if (!success) {
         await actor.setCondition('dead', {overlay: true});
     }
     
-    let content = `<p><strong>${actor.name}</strong> took massive damage (${damageAmount} damage, threshold: ${threshold})!</p>`;
-    content += `<p>Fortitude save result: <strong>${total}</strong> - ${success ? "Success! " + actor.name + " survives the massive damage." : "Failure! " + actor.name + " dies from massive damage."}</p>`;
-    
-    ChatMessage.create({
-        user: game.user.id,
-        speaker: ChatMessage.getSpeaker({actor}),
-        content: content,
-        type: CONST.CHAT_MESSAGE_TYPES.OTHER
+    let content = formatSockets("chat.massiveDamageSummary", {
+        name: actor.name,
+        damage: damageAmount,
+        threshold
     });
+    content += success
+        ? formatSockets("chat.fortitudeSuccess", { name: actor.name, total })
+        : formatSockets("chat.fortitudeFailure", { name: actor.name, total });
+    
+        ChatMessage.create({
+            ...chatMessageStyle("OTHER"),
+            user: game.user.id,
+            speaker: ChatMessage.getSpeaker({actor}),
+            content: content
+        });
     
     return { 
         name: actor.name, 
@@ -178,13 +334,20 @@ export function checkMassiveDamage(damage, maxHP, token) {
     const damageThreshold = Math.max(Math.floor(maxHP / 2), 50);
     
     if (damage >= damageThreshold) {
+        console.log(`Massive damage threshold met: ${damage} damage >= ${damageThreshold} threshold for ${token.name}`);
         
         if (!game.modules.get("socketlib")?.active) {
-            ui.notifications.warn(`${token.name} has taken massive damage (${damage} damage)! SocketLib is not available, cannot roll save remotely.`);
+            ui.notifications.warn(formatSockets("warnings.massiveDamageNoSocketLib", {
+                name: token.name,
+                damage
+            }));
             if (game.user.isGM) {
                 const actor = token.actor;
                 ChatMessage.create({
-                    content: `<p><strong>${actor.name}</strong> took massive damage (${damage}). Roll a DC 15 Fortitude save or die.</p>`,
+                    content: formatSockets("chat.gmFallbackPrompt", {
+                        name: actor.name,
+                        damage
+                    }),
                     speaker: ChatMessage.getSpeaker({token})
                 });
             }
@@ -192,7 +355,10 @@ export function checkMassiveDamage(damage, maxHP, token) {
         }
         
         if (typeof socketlib === 'undefined' || !socket) {
-            ui.notifications.warn(`${token.name} has taken massive damage (${damage} damage)! Socket not initialized yet.`);
+            ui.notifications.warn(formatSockets("warnings.massiveDamageSocketUninitialized", {
+                name: token.name,
+                damage
+            }));
             if (typeof socketlib !== 'undefined' && !socket) {
                 initializeSockets();
             }
@@ -210,6 +376,9 @@ export function checkMassiveDamage(damage, maxHP, token) {
         if (nonGmOwners.length > 0) {
             const targetUserId = nonGmOwners[0][0];
             socket.executeAsUser("rollMassiveDamageSave", targetUserId, actorId, damage, damageThreshold)
+                .then(result => {
+                    console.log("Massive damage save result:", result);
+                })
                 .catch(error => {
                     console.error("Error rolling massive damage save:", error);
                     const activeGm = game.users.find(u => u.active && u.isGM);
@@ -222,7 +391,10 @@ export function checkMassiveDamage(damage, maxHP, token) {
             if (activeGm) {
                 socket.executeAsUser("rollMassiveDamageSave", activeGm.id, actorId, damage, damageThreshold);
             } else {
-                ui.notifications.warn(`${token.name} has taken massive damage (${damage} damage), but no user was found to roll the save.`);
+                ui.notifications.warn(formatSockets("warnings.massiveDamageNoUser", {
+                    name: token.name,
+                    damage
+                }));
             }
         }
     }
@@ -243,7 +415,36 @@ function hasImmobileCondition(token) {
     return token.actor.statuses?.some(status => immobileConditionIds.has(status)) ?? false;
 }
 
+function getActorSpeedFromSystemData(actor, movementType = "walk") {
+    const speedData = actor?.system?.attributes?.speed ?? {};
+    const normalized = String(movementType ?? "walk").toLowerCase();
+    const mappedKey = normalized === "walk" ? "land" : normalized;
+    const speedValue = Number(speedData?.[mappedKey]?.total ?? speedData?.[mappedKey]);
+    return Number.isFinite(speedValue) && speedValue > 0 ? speedValue : 0;
+}
+
+function getActorMovementSpeed(actor, movementType = "walk") {
+    const normalized = String(movementType ?? "walk").toLowerCase();
+    const movementInfo = actor?.getMovement?.(normalized);
+    const movementSpeed = Number(movementInfo?.speed);
+    if (Number.isFinite(movementSpeed) && movementSpeed > 0) return movementSpeed;
+    return getActorSpeedFromSystemData(actor, normalized);
+}
+
+function getLegacySpeedOptions(actor) {
+    const speedData = actor?.system?.attributes?.speed ?? {};
+    return Object.entries(speedData)
+        .map(([speedType, data]) => ({
+            speedType,
+            total: Number(data?.total ?? data)
+        }))
+        .filter(({ total }) => Number.isFinite(total) && total > 0);
+}
+
 async function applyImmobilize(tokenId, limit) {
+    if (!isConditionAutomationEnabled()) {
+        return true;
+    }
     if (!game.settings.get(MODULE.ID, 'restrictMovement')) {
         return true;
     }
@@ -341,9 +542,15 @@ async function useHtkItem(actorId, itemUuid, tokenUuid = null) {
 
 let updatingToken = false;
 
+const BLIND_MOVEMENT_ACROBATICS_DC = 10;
+
 Hooks.on('preUpdateToken', (tokenDocument, updateData, options, userId) => {
+    if (!isConditionAutomationEnabled()) return true;
     if (updatingToken) return true; 
 
+    if (!globalThis.game?.settings?.settings?.has?.(`${MODULE.ID}.restrictMovement`)) {
+        return true;
+    }
     const restrictSetting = game.settings.get(MODULE.ID, 'restrictMovement');
     const limit = tokenDocument.getFlag(MODULE.ID, 'immobilized');
     if (limit !== undefined || hasImmobileCondition(tokenDocument)) {
@@ -387,11 +594,6 @@ Hooks.on('preUpdateToken', (tokenDocument, updateData, options, userId) => {
 
             if (distanceMoved === 0) return true;
 
-            const speedData = token.actor.system?.attributes?.speed ?? {};
-            const availableSpeeds = Object.entries(speedData).filter(([_, data]) => typeof data?.total === "number" && data.total > 0);
-
-            if (!availableSpeeds.length) return true;
-
             const moveToken = async () => {
                 updatingToken = true;
                 await token.document.update(updateData);
@@ -406,8 +608,15 @@ Hooks.on('preUpdateToken', (tokenDocument, updateData, options, userId) => {
                         roll: {
                             label: game.i18n.localize('NAS.conditions.sockets.RollAcrobatics'),
                             callback: async () => {
-                                const roll = await token.actor.rollSkill("acr");
-                                if (roll.rolls[0].total >= 10) {
+                                const roll = await token.actor.rollSkill("acr", {
+                                    dc: BLIND_MOVEMENT_ACROBATICS_DC,
+                                    reason: "blindMovement"
+                                });
+                                const total =
+                                    roll?.rolls?.[0]?.total
+                                    ?? roll?.total
+                                    ?? 0;
+                                if (total >= BLIND_MOVEMENT_ACROBATICS_DC) {
                                     await moveToken();
                                 } else {
                                     token.actor.setCondition("prone", true);
@@ -433,11 +642,24 @@ Hooks.on('preUpdateToken', (tokenDocument, updateData, options, userId) => {
                 promptAcrobatics();
             };
 
-            const defaultSpeedTotal = availableSpeeds[0][1].total;
-            const speedOptions = availableSpeeds.map(([speedType, data], index) => {
-                const label = `${speedType.charAt(0).toUpperCase()}${speedType.slice(1)} (${data.total})`;
+            const currentMovementType = tokenDocument.movementAction;
+            const hasTokenMovementMode = typeof currentMovementType === "string" && currentMovementType.length > 0;
+            if (hasTokenMovementMode) {
+                const speedTotal = getActorMovementSpeed(token.actor, currentMovementType);
+                if (speedTotal > 0) {
+                    void handleSpeedSelection(speedTotal);
+                    return false; 
+                }
+            }
+
+            const availableSpeeds = getLegacySpeedOptions(token.actor);
+            if (!availableSpeeds.length) return true;
+
+            const defaultSpeedTotal = availableSpeeds[0].total;
+            const speedOptions = availableSpeeds.map(({ speedType, total }, index) => {
+                const label = `${speedType.charAt(0).toUpperCase()}${speedType.slice(1)} (${total})`;
                 const checked = index === 0 ? "checked" : "";
-                return `<label><input type="radio" name="blind-speed-type" value="${speedType}" data-total="${data.total}" ${checked}/> ${label}</label>`;
+                return `<label><input type="radio" name="blind-speed-type" value="${speedType}" data-total="${total}" ${checked}/> ${label}</label>`;
             }).join("<br/>");
 
             const dialogContent = `
@@ -504,6 +726,7 @@ function sendNotificationToOwners(token, type, message) {
 }
 
 Hooks.on('pf1ToggleActorCondition', async (actor, condition, enabled) => {
+    if (!isConditionAutomationEnabled()) return;
     if (immobileConditionIds.has(condition)) {
         const tokens = actor.getActiveTokens();
         for (const token of tokens) {
@@ -577,9 +800,20 @@ async function applyBuffToTargetsSocket(buffData, targetIds, duration, casterLev
     await applyBuffToTargets({ ...buffData, document: buffDoc }, targets, duration, casterLevel, options);
 }
 
+async function applyReactiveDamageToActorSocket(actorUuid, value, options = {}) {
+    const actor = await resolveActorByUuid(actorUuid);
+    if (!actor) return false;
+    await applyPlayerDamageWithAutomation(actor, Number(value) || 0, options ?? {});
+    return true;
+}
 
+async function toggleReactiveConditionSocket(actorUuid, conditionId, enabled) {
+    const actor = await resolveActorByUuid(actorUuid);
+    if (!actor || !conditionId) return false;
+    await actor.setCondition?.(String(conditionId), enabled === true);
+    return true;
+}
 
-
-
-
-
+async function toggleReactiveBuffSocket(actorUuid, buffUuid, enabled) {
+    return setReactiveBuffState(actorUuid, buffUuid, enabled === true);
+}

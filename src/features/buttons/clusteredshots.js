@@ -1,4 +1,5 @@
 import { MODULE } from '../../common/module.js';
+import { elementFromHtmlLike } from '../../common/foundryCompat.js';
 import { resolveEnglishName } from '../automation/utils/compendiumNameResolver.js';
 
 const CLUSTERED_SHOTS_COMPENDIUM_SOURCE = "Compendium.pf-content.pf-feats.Item.6b29HYy9MgWVO7oW";
@@ -72,7 +73,7 @@ async function actorHasClusteredShots(actor) {
 }
 
 export async function addClusteredShotsButton(html) {
-    const root = (typeof jQuery !== 'undefined' && html instanceof jQuery) ? html[0] : html;
+    const root = elementFromHtmlLike(html);
     const cards = root?.querySelectorAll('div.pf1.chat-card.item-card, div.chat-card.item-card.pf1');
     
     if (cards?.length) {

@@ -2,6 +2,7 @@ import { MODULE } from '../../../../common/module.js';
 
 export const CONCEALED_CONDITION_ID = "concealed";
 export const CONCEALED_VARIANT_FLAG = "concealedVariant"; 
+const INVISIBLE_CONDITION_ID = "invisible";
 
 export function actorHasBlindFight(actor) {
   return actor?.items?.some(i => i.type === "feat" && i.name?.toLowerCase() === "blind-fight") ?? false;
@@ -80,7 +81,7 @@ export function registerConcealedConditionWrappers() {
     "pf1.documents.actor.ActorPF.prototype.setCondition",
     async function (wrapped, conditionId, enabled, context) {
       try {
-        if (conditionId !== CONCEALED_CONDITION_ID) {
+        if (conditionId !== CONCEALED_CONDITION_ID && conditionId !== INVISIBLE_CONDITION_ID) {
           return await wrapped(conditionId, enabled, context);
         }
 
@@ -90,6 +91,15 @@ export function registerConcealedConditionWrappers() {
 
         const enabledIsObject = globalThis.foundry?.utils?.getType?.(enabled) === "Object";
         const incoming = enabledIsObject ? enabled : {};
+
+        if (conditionId === INVISIBLE_CONDITION_ID) {
+          const next = clonePlainObject(incoming);
+          next.flags ??= {};
+          next.flags[MODULE.ID] ??= {};
+          next.flags[MODULE.ID][CONCEALED_VARIANT_FLAG] = "total";
+          return await wrapped(conditionId, next, context);
+        }
+
         const already = incoming?.flags?.[MODULE.ID]?.[CONCEALED_VARIANT_FLAG];
         if (already === "normal" || already === "total") {
           return await wrapped(conditionId, enabled, context);
@@ -118,4 +128,3 @@ export function registerConcealedConditionWrappers() {
     "WRAPPER"
   );
 }
-

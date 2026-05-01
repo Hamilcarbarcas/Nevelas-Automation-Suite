@@ -12,17 +12,19 @@
         "name": "Enable Metamagic Automation",
         "hint": "When disabled, Nevela's Automation Suite will not add metamagic UI or automation (e.g. persistent/dazing save workflow, empower tooltip overrides)."
       },
+      "enforceSpellAbilityMinimum": {
+        "name": "Enforce Spell Ability Minimum",
+        "hint": "Enforce PF1 spellcasting minimum ability score requirements (10 + spell level). When enabled, spells above the caster's ability limit are blocked for use and assignment, while still honoring spellbooks marked with no ability limit."
+      },
       "damageTypePriority": {
         "name": "Custom Damage Type Priority",
         "hint": "Add custom damage types to be counted as damage reduction types. Magic is at least 1, Cold Iron and Silver types are 3, Adamantine is 4 and Alignments are 5 by default."
       },
       "damageTypePriorityMenu": {
         "name": "Configure Damage Type Priority",
-        "label": "Configure",
         "hint": "Open the configuration form to set damage type priority."
       },
       "customSetting": {
-        "name": "Custom Damage Types",
         "label": "Configure Custom Damage Types",
         "hint": "Add or edit custom damage types for the module."
       },
@@ -47,13 +49,310 @@
           "message": "Use targets stored on the chat card"
         }
       },
+      "metamagicChatCardNameMode": {
+        "name": "Metamagic Chat Card Name",
+        "hint": "Control whether metamagic adds a prefix to the chat card item name.",
+        "choices": {
+          "off": "Do not change chat card name",
+          "highest": "Prefix highest-cost metamagic (random on ties)"
+        }
+      },
+      "metamagicPreviewMode": {
+        "name": "Metamagic Preview Display",
+        "hint": "Choose how much metamagic preview information appears in the spell dialog.",
+        "choices": {
+          "concise": "Concise",
+          "detailed": "Detailed"
+        }
+      },
       "saveRollTokenInteraction": {
         "name": "Save Roll Token Interaction",
         "hint": "Add a clickable token image to saving throw roll messages."
       },
+      "enhancedDiceTooltipMode": {
+        "name": "Enhanced Dice Tooltip",
+        "hint": "Choose how NAS labels PF1 roll tooltip rows.",
+        "choices": {
+          "off": "Off",
+          "labeled": "Labeled rows",
+          "detailed": "Detailed labels"
+        }
+      },
+      "enhancedCombatText": {
+        "name": "Enhanced Combat Text",
+        "hint": "When enabled, NAS restyles PF1 health delta scrolling text so simultaneous damage, healing, and ability changes are easier to distinguish."
+      },
+      "combatTextMode": {
+        "name": "Combat Text Mode",
+        "hint": "Choose how NAS presents PF1 health delta scrolling text.",
+        "choices": {
+          "off": "Off",
+          "enhanced": "Enhanced",
+          "cinematic": "Cinematic"
+        }
+      },
+      "cinematicCombatTextPreset": {
+        "name": "Cinematic Combat Text Preset",
+        "hint": "Choose the movement style NAS uses when Combat Text Mode is Cinematic.",
+        "choices": {
+          "arcLanes": "Arc lanes",
+          "tokenSides": "Token sides"
+        }
+      },
       "skipSurprisedTokens": {
         "name": "Skip Surprised Tokens",
         "hint": "Enable to automatically skip combatants marked as Surprised during the surprise round."
+      },
+      "enableWoundsVigorAutomation": {
+        "name": "Enable Wounds & Vigor Automation",
+        "hint": "When enabled, NAS applies advanced Wounds & Vigor rules on top of PF1's base variant behavior."
+      },
+      "woundsVigorActionTaxMode": {
+        "name": "Wounds & Vigor Action Tax Mode",
+        "hint": "Choose which action types trigger the wounded action tax (-1 wound point and a DC 10 Constitution check).",
+        "choices": {
+          "strict": "Strict RAW (move and standard only)",
+          "broad": "Broad combat (move, standard, full, attack, AoO, round)"
+        }
+      },
+      "woundsVigorNoWoundsConstructUndead": {
+        "name": "W&V House Rule: Construct/Undead Use Vigor Only",
+        "hint": "When enabled, constructs and undead are treated as having no wound track for Wounds & Vigor automation, and are destroyed at 0 vigor."
+      },
+      "woundsVigorWoundDamageTypeMenu": {
+        "hint": "Choose which damage types use Wounds & Vigor wound behavior when applied as wounds."
+      },
+      "translations": {
+        "name": "Translation Settings"
+      },
+      "translationMenu": {
+        "name": "Configure Translations",
+        "label": "Translations",
+        "hint": "Set the translations for various terms for the module to recognize."
+      },
+      "migrationVersion": {
+        "name": "Migration Version"
+      },
+      "migrationTool": {
+        "name": "Run Legacy Migration",
+        "label": "Open Migration Tool",
+        "hint": "Copy legacy module data into this module's settings and flags."
+      },
+      "reorderAllConditions": {
+        "name": "Reorder All Conditions Alphabetically",
+        "hint": "Toggle to reorder all conditions alphabetically or only new conditions added by this module."
+      },
+      "automaticBuffs": {
+        "name": "Enable Automatic Buffs",
+        "hint": "When enabled, the module will attempt to find and apply matching buffs when spells or consumables are used."
+      },
+      "buffAutomationMode": {
+        "name": "Buff Automation Mode",
+        "hint": "Choose how strict the buff automation should be when no targets are selected.",
+        "choices": {
+          "strict": "Strict (require targets)",
+          "lenient": "Lenient (warn and continue)"
+        }
+      },
+      "buffTargetFiltering": {
+        "name": "Buff Target Filtering",
+        "hint": "Choose how buff targets are filtered. \"By Disposition\" only applies buffs to targets with the same disposition as the caster, \"All Targets\" applies buffs to all selected targets, and \"Manual Selection\" prompts you to choose which targets receive the buff.",
+        "choices": {
+          "disposition": "By Disposition",
+          "all": "All Targets",
+          "manual": "Manual Selection"
+        }
+      },
+      "buffCompendiaSelector": {
+        "label": "Select Compendia",
+        "hint": "Choose which compendia to include when searching for buff items."
+      },
+      "customBuffCompendia": {
+        "name": "Custom Buff Compendia",
+        "hint": "Select additional compendia containing buffs to include in the automated buff search."
+      },
+      "automateConditions": {
+        "name": "Automate Conditions",
+        "hint": "Master toggle for condition automation settings. When disabled, condition automation features in this section will not execute."
+      },
+      "handleConfused": {
+        "name": "Automate Confused Condition Actions",
+        "hint": "Enable to automatically generate a message at the start of each round to determine the actions of confused tokens."
+      },
+      "restrictMovement": {
+        "name": "Restrict Movement",
+        "hint": "Choose who is restricted from moving when affected by immobilizing conditions such as 'anchored', 'cowering', 'dazed', 'dying', 'helpless', 'paralyzed', 'petrified', or 'pinned'. 'Players Only' allows GMs to always move tokens. 'Disabled' will allow all movement.",
+        "choices": {
+          "all": "All Users",
+          "players": "Players Only"
+        }
+      },
+      "autoApplyFF": {
+        "name": "Auto Apply Flat-Footed Condition",
+        "hint": "Enable to automatically apply the flat-footed condition to any token with an initiative roll result lower than the highest when combat begins."
+      },
+      "blindMovementCheck": {
+        "name": "Enable Blind Movement Notification",
+        "hint": "Enable to notify users to roll an Acrobatics check when a blind token attempts to move."
+      },
+      "disableAtZeroHP": {
+        "name": "Apply Disabled Condition at 0 HP",
+        "hint": "Automatically apply the disabled condition based on the selected option."
+      },
+      "autoApplyED": {
+        "name": "Auto Apply Energy Drain",
+        "hint": "Enable to automatically apply the energy drain condition to any token with negative levels."
+      },
+      "entangledGrappledHandling": {
+        "name": "Concentration Check for Entangled and Grappled",
+        "hint": "Choose whether to prompt concentration checks for entangled and/or grappled spellcasting.",
+        "choices": {
+          "entangled": "Entangled Only",
+          "grappled": "Grappled Only",
+          "both": "Both Entangled and Grappled"
+        }
+      },
+      "grappledHandling": {
+        "name": "Grappled Action Handling",
+        "hint": "Choose how actions requiring two hands should be handled when grappled: Strict, Lenient, or Disabled.",
+        "choices": {
+          "strict": "Strict (Block two-hand actions)"
+        }
+      },
+      "nauseatedHandling": {
+        "name": "Nauseated Action Handling",
+        "hint": "Choose how actions are handled when affected by the nauseated condition: Strict, Lenient, or Disabled.",
+        "choices": {
+          "strict": "Strict (Block all but move actions)"
+        }
+      },
+      "squeezedHandling": {
+        "name": "Squeezed Action Handling",
+        "hint": "Choose how actions are handled when affected by the squeezed condition: Strict, Lenient, or Disabled.",
+        "choices": {
+          "strict": "Strict (Block attack actions)"
+        }
+      },
+      "squeezedExitHandling": {
+        "name": "Squeezed Exit Handling",
+        "hint": "Choose whether movement leaving a narrow area should still count for squeezing classification.",
+        "choices": {
+          "count": "Count exiting movement (current behavior)",
+          "ignore": "Ignore squeezing when exiting a narrow area"
+        }
+      },
+      "automateSqueezing": {
+        "name": "Automate Squeezing",
+        "hint": "Enable squeezing and squeezed automation. Additional squeezing settings are available in the configuration form."
+      },
+      "squeezingAutomationConfig": {
+        "hint": "Open advanced squeezing automation settings."
+      },
+      "squeezedEscapeFailureHandling": {
+        "name": "Squeezed Escape Failure Handling",
+        "hint": "Choose where movement stops when Escape Artist fails while entering a less-than-half-width area.",
+        "choices": {
+          "stopBeforeNarrow": "Stop before the narrow area",
+          "enterFirstNarrowSquare": "Enter the narrow area and stop at the first square"
+        }
+      },
+      "squeezingMediumBodyWidth": {
+        "name": "Squeezing Medium Body Width",
+        "hint": "Overall body width baseline for Medium tokens (in grid squares). This value scales by token size."
+      },
+      "squeezingMediumHeadWidth": {
+        "name": "Squeezing Medium Head Width",
+        "hint": "Head width baseline for Medium tokens (in grid squares). Spaces narrower than this stop movement."
+      },
+      "squeezingEscapeArtistDC": {
+        "name": "Squeezing Escape Artist DC",
+        "hint": "Escape Artist DC used for less-than-half-width squeezing checks."
+      },
+      "unconsciousAtNegativeHP": {
+        "name": "Apply Unconscious Condition at Negative HP",
+        "hint": "Automatically apply the unconscious condition based on the selected option."
+      },
+      "enableDyingAutomation": {
+        "name": "Enable Dying Automation",
+        "hint": "Automate dying condition maintenance and start-of-turn stabilization checks (DC 10 Constitution check with negative HP penalty)."
+      },
+      "dyingHandling": {
+        "name": "Dying Action Handling",
+        "hint": "Choose how actions are handled while dying: Strict (block all), Lenient (allow with warning), or Disabled.",
+        "choices": {
+          "strict": "Strict (Block all actions)"
+        }
+      },
+      "applyDeadCondition": {
+        "name": "Apply Dead Condition at Negative Constitution HP",
+        "hint": "Automatically apply the dead condition based on the selected option.{monksSuffix}",
+        "choices": {
+          "player-negative-con-npc-negative-hp": "Player (Negative Con), NPC (Negative HP)"
+        },
+        "monksSuffix": " Enabling this option will disable the Monks Combat Details auto defeated setting.",
+        "conflictTitle": "Conflict with Monks Combat Details",
+        "conflictContent": "Enabling this setting will disable the auto-defeated setting of Monks Combat Details. Do you want to proceed?",
+        "monksDisabledInfo": "Monks Combat Details auto-defeated setting has been disabled.",
+        "applyDeadDisabledWarning": "Apply Dead Condition setting has been disabled."
+      },
+      "removeDeadCondition": {
+        "name": "Auto Remove Dead Condition",
+        "hint": "Choose when to automatically remove the dead condition.",
+        "choices": {
+          "aboveNegativeCon": "When HP is above -CON (e.g., -12 with 13 CON)",
+          "nonNegative": "When HP is 0 or more"
+        }
+      },
+      "modifierNameSettings": {
+        "label": "Customize Modifiers",
+        "hint": "Edit the display names for common buff/spell modifiers (e.g., Lesser, Greater, Mass, Communal, etc.)"
+      },
+      "variantMappingManager": {
+        "hint": "View and remove remembered variant assignments for spells/abilities."
+      },
+      "modifierNames": {
+        "name": "Buff/Spell Modifier Names",
+        "hint": "Stores the custom names for buff/spell modifiers."
+      },
+      "communalHandling": {
+        "name": "Communal Spell Duration Handling",
+        "hint": "Choose how communal spell durations are divided among targets: divide evenly (prompt if not possible), or always prompt the caster to divide.",
+        "choices": {
+          "even": "Divide Evenly (Prompt if impossible)",
+          "prompt": "Always Prompt Caster"
+        }
+      },
+      "personalTargeting": {
+        "name": "Personal Spell Targeting",
+        "hint": "Choose whether personal spells can target tokens other than the caster.",
+        "choices": {
+          "allow": "Allow targets other than the caster",
+          "deny": "Deny targets that are not the caster"
+        }
+      },
+      "variantTargetCap": {
+        "name": "Variant Target Cap Handling",
+        "hint": "When a spell has a detected target cap (e.g., Blessing of Fervor), choose whether to enforce it (cancel if exceeded) or only show a warning hint.",
+        "choices": {
+          "enforce": "Enforce cap (cancel if exceeded)",
+          "warn": "Hint only (allow over-cap)"
+        }
+      },
+      "pairedBuffMappings": {
+        "name": "Paired Buff Variant Mappings",
+        "hint": "Internal store for per-spell variant to group assignments."
+      },
+      "sections": {
+        "general": "General",
+        "buff": "Buff Automation",
+        "damage": "Damage Automation",
+        "condition": "Condition Automation",
+        "metamagic": "Metamagic Automation",
+        "translations": "Translations"
+      },
+      "config": {
+        "migrationStartInfo": "Starting migration for custom damage types...",
+        "migrationCompleteInfo": "Migration completed successfully!"
       }
     },
     "combat": {
@@ -65,6 +364,86 @@
         "surprised": {
           "name": "Surprised",
           "tooltip": "Surprised"
+        }
+      }
+    },
+    "commands": {
+      "damage": {
+        "dialogs": {
+          "mainTitle": "{shortName} Damage",
+          "createMacroTitle": "Create Damage Macro",
+          "addDamageRollTitle": "Add Damage Roll",
+          "labels": {
+            "damageComponents": "Damage Components:",
+            "damageFormula": "Damage Formula:",
+            "damageTypes": "Damage Type(s):",
+            "macroName": "Macro Name:"
+          },
+          "placeholders": {
+            "formula": "e.g. 1d8+5",
+            "macroName": "{shortName} Damage Macro"
+          },
+          "buttons": {
+            "addRoll": "Add Roll",
+            "rollDamage": "Roll Damage",
+            "add": "Add",
+            "createMacro": "Create Macro"
+          },
+          "messages": {
+            "emptyComponents": "No damage components yet. Click \"Add Roll\" to create a damage roll.",
+            "componentsInfo": "Add one or more damage rolls with their own formulas and damage types.",
+            "componentLabel": "Damage Roll {index}",
+            "componentTypeSingle": "Damage Type:",
+            "componentTypePlural": "Damage Types:"
+          }
+        },
+        "chat": {
+          "applyHalf": "Apply Half",
+          "flavorDamage": "Damage: {types}"
+        },
+        "errors": {
+          "invalidMacroFormat": "Invalid format for ASDamage.roll(). Use 'type: X, for: Y' or '1d8 fire + 2d6 acid'",
+          "invalidMacroArgument": "Invalid argument for ASDamage.roll(). Use a string or object.",
+          "noFormulaProvided": "No formula provided for damage roll",
+          "noDamageComponentsProvided": "No damage components provided",
+          "errorCreatingDamageRoll": "Error creating damage roll",
+          "failedParseMixedDamageFormula": "Failed to parse mixed damage formula",
+          "errorCreatingMixedDamageRoll": "Error creating mixed damage roll",
+          "enterDamageFormula": "Please enter a damage formula",
+          "selectAtLeastOneDamageType": "Please select at least one damage type",
+          "addAtLeastOneDamageComponent": "Please add at least one damage component",
+          "invalidAdFormat": "Invalid format for /ad command",
+          "errorCreatingDamageMacro": "Error creating damage macro"
+        },
+        "warnings": {
+          "noDamageTypeProvidedUsingUntyped": "No damage type provided, using 'untyped'"
+        },
+        "info": {
+          "adExamples": "Examples: /ad 1d8+5 fire  or  /ad 1d8 fire + 2d6 acid",
+          "macroCreated": "Macro \"{name}\" created successfully."
+        }
+      }
+    },
+    "integration": {
+      "itemActions": {
+        "libWrapperRequired": "{moduleName} requires the 'libWrapper' module. Please install and activate it."
+      },
+      "sockets": {
+        "warnings": {
+          "socketLibRequired": "SocketLib is required for the Massive Damage rule to work properly. Please install and activate the socketlib module.",
+          "massiveDamageNoSocketLib": "{name} has taken massive damage ({damage} damage)! SocketLib is not available, cannot roll save remotely.",
+          "massiveDamageSocketUninitialized": "{name} has taken massive damage ({damage} damage)! Socket not initialized yet.",
+          "massiveDamageNoUser": "{name} has taken massive damage ({damage} damage), but no user was found to roll the save."
+        },
+        "results": {
+          "unknownName": "Unknown",
+          "noActorFound": "No actor found"
+        },
+        "chat": {
+          "massiveDamageSummary": "<p><strong>{name}</strong> took massive damage ({damage} damage, threshold: {threshold})!</p>",
+          "fortitudeSuccess": "<p>Fortitude save result: <strong>{total}</strong> - Success! {name} survives the massive damage.</p>",
+          "fortitudeFailure": "<p>Fortitude save result: <strong>{total}</strong> - Failure! {name} dies from massive damage.</p>",
+          "gmFallbackPrompt": "<p><strong>{name}</strong> took massive damage ({damage}). Roll a DC 15 Fortitude save or die.</p>"
         }
       }
     },
@@ -120,8 +499,7 @@
           "clear": "Clear All"
         },
         "confirmations": {
-          "clearAll": "Are you sure you want to clear all saved values?",
-          "deleteValue": "Are you sure you want to delete \"{value}\"?"
+          "clearAll": "Are you sure you want to clear all saved values?"
         },
         "errors": {
           "selectAbility": "You must select an ability score when specifying a damage type.",
@@ -162,7 +540,85 @@
         "title": "Translation Config",
         "englishName": "English Name",
         "translation": "Translation",
-        "description": "Change the words for 'Hardness', 'Construct Traits', and 'Undead Traits' to their translations in your desired language."
+        "description": "Configure translated trait names and optional class/race aliases used for language-sensitive automation matching.",
+        "constructTraits": "Construct Traits",
+        "undeadTraits": "Undead Traits",
+        "constructClassNames": "Construct Class Names (comma separated)",
+        "undeadClassNames": "Undead Class Names (comma separated)",
+        "constructRaceNames": "Construct Race Names (comma separated)",
+        "undeadRaceNames": "Undead Race Names (comma separated)"
+      },
+      "damageUi": {
+        "all": "All",
+        "allInherited": "All (Inherited)",
+        "noneSelectedInherited": "None Selected (Inherited)",
+        "inherited": "Inherited"
+      },
+      "variantMappingManager": {
+        "title": "Manage Variant Mappings",
+        "notes": "View and remove remembered variant assignments for spells and abilities. Check entries to remove and click Save.",
+        "columns": {
+          "spellAbility": "Spell / Ability",
+          "alliesVariant": "Allies Variant",
+          "foesVariant": "Foes Variant",
+          "switching": "Switching",
+          "perTarget": "Per-Target"
+        },
+        "empty": "No saved mappings.",
+        "savedInfo": "Removed selected mappings."
+      },
+      "buffCompendiaSelector": {
+        "title": "Select Buff Compendia",
+        "notes": "Select compendia that contain buff items to include in the automated buff search.",
+        "includeWorldBuffs": "Include World Buffs (Items Directory)",
+        "worldId": "world",
+        "saveSelections": "Save Selections",
+        "savedInfo": "Saved custom buff compendia ({count} selected)"
+      },
+      "modifierNames": {
+        "title": "Customize Buff/Spell Modifiers",
+        "labels": {
+          "lesser": "Lesser",
+          "minor": "Minor",
+          "improved": "Improved",
+          "greater": "Greater",
+          "major": "Major",
+          "supreme": "Supreme",
+          "mass": "Mass",
+          "communal": "Communal"
+        },
+        "savedInfo": "Saved custom modifier names."
+      },
+      "woundDamageTypesForm": {
+        "title": "W&V Wound Damage Types",
+        "description": "Checked damage types will use dice amount / caster level when applying direct wound damage.",
+        "selectAll": "Select All",
+        "clearAll": "Clear",
+        "defaults": "Defaults"
+      },
+      "squeezingAutomationConfig": {
+        "title": "Squeezing Automation Configuration",
+        "description": "Configure squeezing and squeezed automation behavior.",
+        "sizeDescription": "Size values are Medium baselines in grid squares and scale with token size.",
+        "labels": {
+          "squeezedHandling": "Squeezed Action Handling",
+          "squeezedExitHandling": "Squeezed Exit Handling",
+          "squeezedEscapeFailureHandling": "Squeezed Escape Failure Handling",
+          "squeezingMediumBodyWidth": "Medium Body Width",
+          "squeezingMediumHeadWidth": "Medium Head Width",
+          "squeezingEscapeArtistDC": "Escape Artist DC"
+        }
+      },
+      "squeezingTokenConfig": {
+        "title": "Nevela Automation Suite - Squeezing",
+        "labels": {
+          "bodyWidth": "Body Width",
+          "headWidth": "Head Width"
+        },
+        "tooltips": {
+          "bodyWidth": "Medium baseline body width. Leave empty to use module default.",
+          "headWidth": "Medium baseline head width. Leave empty to use module default."
+        }
       }
     },
     "common": {
@@ -189,17 +645,51 @@
         "no": "No",
         "save": "Save",
         "cancel": "Cancel",
-        "browse": "Browse"
+        "browse": "Browse",
+        "apply": "Apply",
+        "configure": "Configure",
+        "remove": "Remove",
+        "select": "Select"
       },
       "labels": {
         "none": "None",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "formula": "Formula",
+        "damageTypes": "Damage types",
+        "target": "Target",
+        "ally": "Ally",
+        "foe": "Foe"
+      },
+      "placeholders": {
+        "search": "Search...",
+        "noneSelected": "None selected",
+        "noneSelectedTitleCase": "None Selected"
+      },
+      "choices": {
+        "audience": {
+          "none": "No one",
+          "npc": "NPC Only",
+          "player": "Player Only",
+          "everyone": "Everyone"
+        },
+        "handling": {
+          "disabled": "Disabled",
+          "disabledNoRestrictions": "Disabled (No restrictions)",
+          "lenientWarning": "Lenient (Allow with warning)"
+        }
       }
     },
     "damage": {
+      "HealthModeVigor": "Apply mode: Vigor",
+      "HealthModeWounds": "Apply mode: Wounds",
+      "warnings": {
+        "hardnessFlagsDeprecated": "[{moduleId}] Hardness boolean/dictionary flags are deprecated and will not be supported in the future. Please update to use item options."
+      },
       "labels": {
-        "actionSettings": "Action Damage Settings",
         "bypassSection": "Damage Type Bypass Settings"
+      },
+      "titles": {
+        "actionSettings": "Action Damage Settings"
       },
       "itemSettings": {
         "Title": "Item Damage Settings",
@@ -225,8 +715,7 @@
         "BypassDRHint": "Bypasses DR for selected damage types."
       },
       "buttons": {
-        "GlobalSettings": "Global Damage Settings",
-        "ActionSettings": "Action Damage Settings"
+        "GlobalSettings": "Global Damage Settings"
       },
       "save": "Save Changes"
     },
@@ -268,6 +757,10 @@
           "label": "Grappling",
           "description": "<p>You are controlling a grapple and are slowed.</p><p>Targets you successfully grapple gain the grappled condition.</p>"
         },
+        "squeezed": {
+          "label": "Squeezed",
+          "description": "<p>You are squeezing through a space narrower than half your width.</p><p>You take a -4 penalty to AC and attack rolls, lose your Dexterity bonus to AC, and cannot attack while in this state.</p>"
+        },
         "flatFooted": {
           "label": "Flat-Footed",
           "description": "<p>Has not yet acted during combat.</p><p>Loses Dexterity bonus to AC and CMD.</p><p>Cannot make attacks of opportunity, unless having Combat Reflexes feat or Uncanny Dodge class ability.</p><p>Characters with Uncanny Dodge retain Dexterity bonus to AC and can make attacks of opportunity before acting in the first round.</p><p>Cannot take immediate actions while flat-footed.</p>"
@@ -307,18 +800,23 @@
         "GrappledLenient": "{name} is grappled but can perform the action under lenient handling.",
         "NauseatedStrict": "{name} cannot perform this action due to being nauseated; only move actions are allowed.",
         "NauseatedLenient": "{name} is nauseated but can perform other actions under lenient handling.",
-        "SqueezingStrict": "{name} cannot perform attack actions due to being squeezed.",
-        "SqueezingLenient": "{name} is squeezing but can perform attacks under lenient handling.",
+        "SqueezedStrict": "{name} cannot perform attack actions due to being squeezed.",
+        "SqueezedLenient": "{name} is squeezed but can perform attacks under lenient handling.",
+        "DyingStrict": "{name} cannot perform actions while dying.",
+        "DyingLenient": "{name} is dying but can perform actions under lenient handling.",
+        "DyingHpPenalty": "Negative HP",
         "SurpriseRound": "Surprise Round",
         "GrappleCheckbox": "Grapple",
         "GrappleNoTargets": "Grapple requires at least one target.",
         "GrappleFootnote": "+[[5]] circumstance bonus on grapple checks made against the same grappled target in subsequent rounds.",
         "GrappleConcentrationDC": "Concentration DC vs grapple: {dc} (10 + spell level {spellLevel} + grapple check {grappleTotal}).",
         "ConcealedDialogTitle": "Choose Concealment Type",
-        "ConcealedNormal": "Normal (20%)",
-        "ConcealedTotal": "Total (50%)",
+        "ConcealedNormal": "Normal",
+        "ConcealedTotal": "Total",
         "ConcealedFootnote": "{variant}: Miss chance roll {roll}; success on {threshold}+.",
-        "ConcealedSelectionCanceled": "Concealment selection canceled."
+        "ConcealedSelectionCanceled": "Concealment selection canceled.",
+        "WoundsVigorConCheckPassed": "{name} acts while wounded: Constitution check {total} vs DC {dc} succeeded.",
+        "WoundsVigorConCheckFailed": "{name} acts while wounded: Constitution check {total} vs DC {dc} failed and they fall unconscious."
       },
       "sockets": {
         "MovementRestrictionRemoved": "Movement restriction removed from token.",
@@ -348,12 +846,19 @@
         "ResolveUnstoppablePrompt": "{name} can spend a use of Resolve to stabilize and remain conscious. Use it now?"
       }
     },
+    "spellcasting": {
+      "actions": {
+        "cast": "cast",
+        "add": "add",
+        "update": "update"
+      },
+      "abilityMinimumBlocked": "Cannot {action} {spell}: level {level} requires {ability} {required}, but current is {current}."
+    },
     "buffs": {
       "NoTargetsSelected": "{name} requires at least one target.",
       "UnableToApplyAutomaticBuffs": "Unable to apply automatic buffs for {name} - no targets selected.",
       "MultipleBuffOptionsFound": "Multiple buff options found for <strong>{name}</strong>. Please select which one to apply:",
       "SelectBuffVariant": "Select Buff Variant",
-      "Select": "Select",
       "SelectTargets": "Select which targets should receive <strong>{name}</strong>:",
       "SelectBuffTargets": "Select Buff Targets",
       "ApplyBuff": "Apply Buff",
@@ -367,9 +872,12 @@
       "Foes": "Foes",
       "AllowSwitchingEachRound": "Allow targets to switch variants each round",
       "RememberForSpell": "Remember for this spell",
+      "SpellFallback": "Spell",
       "TargetCapHint": "Max targets allowed: {cap}",
       "TargetCapHintRemaining": "Max targets: {cap} | Remaining: {remaining}",
       "TargetCapExceeded": "You can only select {cap} target(s) for this spell.",
+      "TotalAvailableDuration": "Total available duration: <b>{total} {unit}</b>",
+      "UnassignedDuration": "Unassigned duration: <b><span id=\"unassigned\">{remaining}</span> {unit}</b>",
       "UpdatedExisting": "Updated existing {name} on {actor}",
       "Applied": "Applied {name} to {actor}",
       "FailedToApply": "Failed to apply {name}: {error}",
@@ -378,9 +886,188 @@
       "TargetingRejectedDisposition": "Unable to apply automatic buffs for {name}: all selected targets were filtered out by disposition settings.",
       "TargetingRejectedManualSelection": "Unable to apply automatic buffs for {name}: target selection was canceled or no targets were selected.",
       "TargetingRejectedCommunalSelection": "Unable to apply automatic buffs for {name}: communal target/duration selection was canceled.",
-      "TargetingRejectedUnknown": "Unable to apply automatic buffs for {name}: target validation failed."
+      "TargetingRejectedUnknown": "Unable to apply automatic buffs for {name}: target validation failed.",
+      "mirrorImage": {
+        "title": "Mirror Image",
+        "created": "{actor} creates {images} mirror images (CL {cl}).",
+        "counts": {
+          "imageOne": "image",
+          "imageMany": "images",
+          "remainOne": "remains",
+          "remainMany": "remain"
+        },
+        "results": {
+          "realTarget": "Attack {attack} vs AC {ac}; the real target was selected. {images} {imageNoun} {remainVerb}.",
+          "imageHit": "Attack {attack} vs AC {ac}; {formula} rolled {roll}, destroying an image. {images} {imageNoun} {remainVerb}.",
+          "nearMiss": "Attack {attack} missed AC {ac} by 5 or less, destroying an image. {images} {imageNoun} {remainVerb}.",
+          "missNoImage": "Attack {attack} missed AC {ac} by more than 5. No image was destroyed."
+        },
+        "public": {
+          "realTarget": "Mirror Image does not divert the attack.",
+          "imageHit": "The attack strikes a mirror image.",
+          "nearMiss": "A near miss destroys a mirror image."
+        },
+        "undo": "Undo",
+        "undone": "undone"
+      }
     },
     "metamagic": {
+      "prefixes": {
+        "dazingSpell": "Dazing",
+        "empowerSpell": "Empowered",
+        "enlargeSpell": "Enlarged",
+        "extendSpell": "Extended",
+        "heightenSpell": "Heightened",
+        "intensifiedSpell": "Intensified",
+        "maximizeSpell": "Maximized",
+        "persistentSpell": "Persistent",
+        "quickenSpell": "Quickened",
+        "reachSpell": "Reach",
+        "selectiveSpell": "Selective",
+        "stillSpell": "Still",
+        "silentSpell": "Silent"
+      },
+      "maskFocus": {
+        "requiresExtendSpell": "Mask Focus requires Extend Spell to be selected.",
+        "notOnSpellLike": "Mask Focus cannot be used with spells from this spell-like spellbook.",
+        "featNotFound": "Mask Focus feat was not found on this actor.",
+        "missingUses": "{name} has no uses metadata; Mask Focus cannot be applied.",
+        "noUsesRemaining": "Mask Focus has no remaining uses today.",
+        "extendNotApplicable": "Extend Spell could not change this spell's duration; Mask Focus was turned off for this cast.",
+        "durationOnSelfSuffix": "({value} {units} on self)"
+      },
+      "metamagicMastery": {
+        "maxLevelExceeded": "Metamagic Mastery: modified spell level would exceed the highest spell level you can cast.",
+        "missingUsesData": "Metamagic Mastery has no uses metadata on this actor.",
+        "insufficientUses": "Metamagic Mastery: not enough daily uses for this metamagic.",
+        "previewDebit": "Metamagic Mastery: spends {count} daily use(s); spell uses its normal spell slot."
+      },
+      "metamixing": {
+        "missingReservoirUsesData": "Metamixing: arcane reservoir has no uses metadata on this actor.",
+        "insufficientReservoir": "Metamixing: not enough points in your arcane reservoir."
+      },
+      "mimicMetamagic": {
+        "setupTitle": "Mimic Metamagic Setup",
+        "setupDescription": "Choose {count} metamagic feats to store for Mimic Metamagic.",
+        "castPromptLabel": "Choose one stored metamagic to mimic for this cast:",
+        "notEligible": "Mimic Metamagic is not available for this spell.",
+        "incompleteSetup": "Mimic Metamagic setup is incomplete.",
+        "noEligibleChoices": "None of your configured Mimic Metamagic choices are eligible for this spell.",
+        "heightenNoValidLevels": "No valid Heighten Spell levels are available for this cast.",
+        "missingChoice": "Mimic Metamagic: no metamagic choice was selected.",
+        "duplicateWithReal": "Mimic Metamagic cannot mimic a metamagic already selected as a real metamagic this cast.",
+        "choiceNotConfigured": "Mimic Metamagic: the chosen metamagic is not configured on the class feature item.",
+        "maxLevelExceeded": "Mimic Metamagic: you cannot mimic this metamagic on the spell because your psychic casting progression is too low.",
+        "missingPhrenicUsesData": "Mimic Metamagic: Phrenic Pool has no uses metadata on this actor.",
+        "insufficientPhrenicPoints": "Mimic Metamagic: not enough phrenic pool points for the chosen metamagic."
+      },
+      "peerlessSpeed": {
+        "castPromptLabel": "Peerless Speed metamagic",
+        "notApplicable": "Peerless Speed cannot apply to this spell.",
+        "notEligible": "Peerless Speed is not eligible for this spell.",
+        "missingChoice": "Peerless Speed requires a metamagic choice.",
+        "invalidChoice": "Peerless Speed can only apply Quicken, Empower, or Maximize.",
+        "duplicateWithReal": "Peerless Speed choice duplicates selected metamagic.",
+        "duplicateWithMimic": "Peerless Speed cannot duplicate Mimic Metamagic's chosen metamagic.",
+        "missingUsesData": "{name} has no uses metadata.",
+        "noRemainingUses": "{name} has no remaining uses.",
+        "requiresDamageForEmpowerOrMaximize": "Peerless Speed can only apply Empower or Maximize to spells with damage.",
+        "couldNotApply": "Peerless Speed could not apply {metamagic}."
+      },
+      "spellPerfection": {
+        "maxLevelExceeded": "Spell Perfection: the modified spell level cannot exceed 9th."
+      },
+      "dialogs": {
+        "selectMetamagic": "Select metamagic",
+        "chooseSpellForName": "Choose a spell for {name}:",
+        "chooseSpellsForName": "Choose {count} spells for {name}:"
+      },
+      "warnings": {
+        "noNonSpelllikeSpellsFound": "No non-spelllike spells found.",
+        "spontaneousMetafocusFeatNotFound": "Spontaneous Metafocus feat item was not found on this actor.",
+        "noValidTransmuterChoices": "No valid Transmuter of Korada spell choices were found.",
+        "noNonSpelllikeSpellsUpToThirdFound": "No non-spelllike spells of level 3 or below found.",
+        "intensifiedCannotApply": "Intensified Spell cannot be applied to this spell."
+      },
+      "selectiveSpell": {
+        "title": "Selective Spell",
+        "excludeTargetsLabel": "Exclude targets:"
+      },
+      "succorFinalRevelation": {
+        "selectMetamagicLabel": "Select metamagic for Succor Final Revelation",
+        "ignoreNonAllies": "Ignore non-allies",
+        "cancelAction": "Cancel action",
+        "continueAnyway": "Continue anyway",
+        "nonAlliesPrompt": "One or more selected targets are not allies. How do you want to proceed?",
+        "notEligible": "Succor Final Revelation is not eligible for this spell.",
+        "invalidChoice": "Invalid metamagic choice for Succor Final Revelation.",
+        "duplicateWithReal": "Succor Final Revelation metamagic duplicates a selected metamagic.",
+        "duplicateWithMimic": "Succor Final Revelation metamagic duplicates Mimic Metamagic.",
+        "duplicateWithPeerless": "Succor Final Revelation metamagic duplicates Peerless Speed.",
+        "noEligibleChoices": "No eligible metamagic choices for Succor Final Revelation on this spell."
+      },
+      "metamagicAdept": {
+        "missingUsesData": "Metamagic Adept has no uses metadata; skipping cast-time bypass.",
+        "noRemainingUses": "Metamagic Adept has no remaining uses."
+      },
+      "featureNames": {
+        "healersBlessing": "Healer's Blessing",
+        "intenseCelebration": "Intense Celebration",
+        "naniteBloodlineArcana": "Nanite Bloodline",
+        "oneBodyTwoMinds": "One Body, Two Minds",
+        "transmuterOfKorada": "Transmuter of Korada",
+        "eldritchResearcher": "Eldritch Researcher",
+        "maleficium": "Maleficium",
+        "maskFocus": "Mask Focus",
+        "mimicMetamagic": "Mimic Metamagic",
+        "peerlessSpeed": "Peerless Speed",
+        "magicalLineage": "Magical Lineage",
+        "spellPerfection": "Spell Perfection",
+        "spontaneousMetafocus": "Spontaneous Metafocus",
+        "succorFinalRevelation": "Succor Final Revelation",
+        "timelessSoul": "Timeless Soul",
+        "retribution": "Retribution",
+        "metamixing": "Metamixing",
+        "arcaneApotheosis": "Arcane Apotheosis",
+        "metamagicAdept": "Metamagic Adept",
+        "curatorMysticSecrets": "Curator of Mystic Secrets",
+        "seekerEternalEmperor": "Seeker of the Eternal Emperor",
+        "metamagicMastery": "Metamagic Mastery",
+        "arcaneBloodline": "Arcane Bloodline",
+        "grandMaestro": "Grand Maestro",
+        "wayangSpellhunter": "Wayang Spellhunter (Minata)"
+      },
+      "preview": {
+        "title": "Metamagic Preview",
+        "selected": "Selected: {value}",
+        "options": "Options: {value}",
+        "requiredSlotLevel": "Required slot level: {value}",
+        "effectiveSpellLevel": "Effective spell level: {value}",
+        "requiredSlotLevelUses": "Required slot level: {value} (uses 1 level {value} slot)",
+        "activeModifiers": "Active modifiers: {value}",
+        "reachDetail": "Reach Spell: +{steps} step(s)",
+        "heightenDetail": "Heighten Spell: set to level {level}",
+        "slotModsTimeless": "Slot mods: +{otherIncrease} metamagic (Quicken fixed at +{quickenFixed}), {slotAdjustment} reducers on non-Quicken -> +{reduced}",
+        "slotModsDefault": "Slot mods: +{otherIncrease} metamagic, {slotAdjustment} reducers -> +{reduced}",
+        "spellPerfectionWaiver": "Spell Perfection: -{value}",
+        "saveDcNoChange": "Save DC: No change",
+        "saveDcArcaneBonus": "Save DC: +1 (Arcane Bloodline)",
+        "saveDcArcaneCalc": "Save DC: {base} + 1 = {total} (Arcane Bloodline)",
+        "modifiersTitle": "Modifiers"
+      },
+      "reachSpell": {
+        "title": "Reach Spell",
+        "rangeStepsLabel": "Range steps"
+      },
+      "heightenSpell": {
+        "title": "Heighten Spell",
+        "currentLevel": "Current level: {level}",
+        "heightenTo": "Heighten to",
+        "levelLabel": "Level {level}"
+      },
+      "eldritchResearcher": {
+        "storyFeatComplete": "Story feat complete"
+      },
       "PersistentNoTargets": {
         "current": "Persistent Spell: target one or more tokens.",
         "selected": "Persistent Spell: select one or more tokens.",
@@ -388,6 +1075,74 @@
       },
       "PersistentSave": "Persistent Spell save",
       "PersistentSaveSecond": "Persistent Spell (second save)"
+    },
+    "reactive": {
+      "onHitHeader": "On Hit Effects",
+      "onHitHeaderOverride": "On Hit Effects (override)",
+      "labels": {
+        "onHit": "On Hit",
+        "onStruck": "On Struck"
+      },
+      "onStruckHeader": "On Struck Effects",
+      "enabled": "Enable automation",
+      "preset": "Preset",
+      "presetLifesteal": "Lifesteal",
+      "presetSelfHeal": "Self heal",
+      "presetSelfDamage": "Self damage",
+      "presetFireShield": "Fire Shield",
+      "presetThorns": "Thorns",
+      "presetCustom": "Custom",
+      "effectType": "Effect",
+      "effectHealAttacker": "Heal attacker",
+      "effectDamageAttacker": "Damage attacker",
+      "effectApplyBuffAttacker": "Apply buff to attacker",
+      "effectRemoveBuffAttacker": "Remove buff from attacker",
+      "effectApplyConditionAttacker": "Apply condition to attacker",
+      "effectRemoveConditionAttacker": "Remove condition from attacker",
+      "mode": "Amount mode",
+      "modePercentFinal": "% of final damage dealt",
+      "value": "Value",
+      "formulaPlaceholder": "e.g. 1d6 + min(@cl, 15)",
+      "damageType": "Damage type",
+      "additionalEffectsHeader": "Additional effects",
+      "buffsHeader": "Buffs",
+      "conditionsHeader": "Conditions",
+      "actionApplySelf": "Apply to Self",
+      "actionRemoveSelf": "Remove from Self",
+      "actionApplyTarget": "Apply to Target(s)",
+      "actionRemoveTarget": "Remove from Target(s)",
+      "actionOnStruckApplySelf": "Apply to self",
+      "actionOnStruckRemoveSelf": "Remove from self",
+      "actionOnStruckApplyAttacker": "Apply to attacker",
+      "actionOnStruckRemoveAttacker": "Remove from attacker",
+      "addRow": "Add row",
+      "editSelection": "Select entries",
+      "removeRow": "Remove row",
+      "buffToToggle": "Buff",
+      "buffChoice": "Choose buff",
+      "conditionToToggle": "Condition",
+      "conditionChoice": "Choose condition",
+      "worldLabel": "World",
+      "damageTypeUntyped": "Untyped",
+      "postMessage": "Post chat message",
+      "meleeOnly": "Melee attacks only",
+      "excludeReach": "Ignore reach attacks",
+      "chatSummary": {
+        "onHitTitle": "On Hit — {item}",
+        "onStruckTitle": "On Struck — {item}",
+        "subtitleOnHit": "vs. {other} · {finalDamage} damage dealt on this hit",
+        "subtitleOnStruck": "Struck by {other} — {finalDamage} damage was dealt on this hit",
+        "onHitFallback": "Reactive effect",
+        "onStruckFallback": "Reactive effect",
+        "unknownBuff": "Unnamed buff",
+        "unknownCondition": "Unknown condition",
+        "lineHeal": "{actor} regains {amount} hit points.",
+        "lineDamage": "{actor} takes {amount} points of {types} damage.",
+        "lineApplyCondition": "{actor} gains {name}.",
+        "lineRemoveCondition": "{actor} loses {name}.",
+        "lineApplyBuff": "{actor} gains {name}.",
+        "lineRemoveBuff": "{actor} loses {name}."
+      }
     },
     "clusteredShots": {
       "buttonLabel": "🎯 Clustered Shots 🎯",

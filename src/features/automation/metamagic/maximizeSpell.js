@@ -1,10 +1,17 @@
+import {
+  appendDamagePartOverrides,
+  mapDamagePartFormulas,
+  maximizeDiceTermsEngine,
+  validateFormula
+} from "../utils/formulaUtils.js";
+
 export const METAMAGIC_DEFINITION = {
   key: "maximizeSpell",
   name: "Maximize Spell",
-  prefix: "Maximize",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.maximizeSpell") ?? "Maximize"; },
 };
 
-function updateFormula(formula) {
+function updateFormulaWithRegex(formula) {
   if (!formula || typeof formula !== "string") return { formula, changed: false };
   const dicePattern =
     /(\([^)]*\)|@cl|clamp\([^)]*\)|min\([^)]*\)|floor\([^)]*\)|\d+)(\s*\)*)\s*d\s*(\d+)/gi;
@@ -28,41 +35,23 @@ function updateFormula(formula) {
   return { formula: updated, changed };
 }
 
-function getCurrentFormula(context, index, fallback) {
-  const overrides = context?.damageOverrides?.parts;
-  if (Array.isArray(overrides)) {
-    for (let i = overrides.length - 1; i >= 0; i -= 1) {
-      const entry = overrides[i];
-      if (entry?.index === index && entry?.formula) return entry.formula;
-    }
-  }
-  return fallback;
+function maximizeFormula(formula, rollData = {}) {
+  const engineFormula = maximizeDiceTermsEngine(formula, rollData);
+  if (engineFormula && engineFormula !== formula) return engineFormula;
+
+  const updated = updateFormulaWithRegex(formula);
+  if (!updated.changed || updated.formula === formula) return formula;
+  if (!validateFormula(updated.formula, rollData)) return formula;
+  return updated.formula;
 }
 
-export function applyMaximizeSpell(context) {
-  if (!context?.damage?.parts || !Array.isArray(context.damage.parts)) return false;
+export function applyMaximizeToFormula(formula, rollData = {}) {
+  return maximizeFormula(formula, rollData);
+}
 
-  const overrides = [];
-  context.damage.parts.forEach((part, index) => {
-    if (!part || typeof part !== "object") return;
-    const baseFormula = part.formula ?? part[0];
-    const formula = getCurrentFormula(context, index, baseFormula);
-    if (!formula) return;
-    const updated = updateFormula(formula);
-    if (!updated.changed || updated.formula === formula) return;
-    overrides.push({
-      index,
-      isArray: Array.isArray(part),
-      formula: updated.formula,
-    });
-  });
-
-  if (!overrides.length) return false;
-  context.damageOverrides ??= { parts: [] };
-  context.damageOverrides.parts = [
-    ...(context.damageOverrides.parts ?? []),
-    ...overrides,
-  ];
+export function applyMaximizeSpell(context, rollData = {}) {
+  const overrides = mapDamagePartFormulas(context, (formula) => maximizeFormula(formula, rollData));
+  if (!appendDamagePartOverrides(context, overrides)) return false;
 
   if (!context.metamagic) {
     context.metamagic = { applied: [], slotIncrease: 0 };

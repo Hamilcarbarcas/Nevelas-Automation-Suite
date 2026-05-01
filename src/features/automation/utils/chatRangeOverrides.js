@@ -1,4 +1,5 @@
 import { MODULE } from "../../../common/module.js";
+import { elementFromHtmlLike } from "../../../common/foundryCompat.js";
 
 let hoverOverrideAttached = false;
 const HOVER_ACTION_OVERRIDES = new WeakMap();
@@ -141,7 +142,7 @@ export function applyChatRangeOverrides(message, html) {
   const overrides = message?.flags?.[MODULE.ID]?.actionOverrides?.range;
   if (!overrides) return;
 
-  const root = Array.isArray(html) ? html[0] : html?.[0] || html;
+  const root = elementFromHtmlLike(html);
   if (!root) return;
 
   const rangeElement = root.querySelector(".card-range");
@@ -156,7 +157,7 @@ export function applyChatRangeOverrides(message, html) {
 
 export function registerChatRangeHoverOverrides(html) {
   if (hoverOverrideAttached) return;
-  const root = Array.isArray(html) ? html[0] : html?.[0] || html;
+  const root = elementFromHtmlLike(html);
   if (!root) return;
   hoverOverrideAttached = true;
 

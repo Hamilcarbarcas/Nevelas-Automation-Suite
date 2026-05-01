@@ -1,3 +1,5 @@
+import { contextHasSavingThrow } from "./saveDcUtils.js";
+
 function setOverride(overrides, obj, path, value) {
   if (!obj || value === undefined) return;
   overrides.push({
@@ -13,20 +15,15 @@ export function applyActionUseOverrides(actionUse, context) {
 
   const overrides = [];
 
-  const itemSystem = actionUse.item?.system;
+  const item = actionUse.item;
   const action = actionUse.action;
 
   if (context.components) {
     Object.entries(context.components).forEach(([key, value]) => {
-      setOverride(overrides, itemSystem, `components.${key}`, value);
+      // Use document path to ensure downstream chat rendering reads the projected component values.
+      const path = `system.components.${key}`;
+      setOverride(overrides, item, path, value);
     });
-  }
-
-  if (context.activation) {
-    setOverride(overrides, action, "activation.cost", context.activation.cost);
-    setOverride(overrides, action, "activation.type", context.activation.type);
-    setOverride(overrides, action, "activation.unchained.cost", context.activation.unchained?.cost);
-    setOverride(overrides, action, "activation.unchained.type", context.activation.unchained?.type);
   }
 
   if (context.range) {
@@ -41,7 +38,7 @@ export function applyActionUseOverrides(actionUse, context) {
     }
   }
 
-  if (context.save) {
+  if (context.save && contextHasSavingThrow(context, actionUse)) {
     setOverride(overrides, action, "save.dc", context.save.dc);
     setOverride(overrides, action, "save.type", context.save.type);
     setOverride(overrides, action, "save.description", context.save.description);
@@ -76,7 +73,7 @@ export function applyActionUseOverrides(actionUse, context) {
   if (context.alignments) {
     if (context.alignments.item) {
       Object.entries(context.alignments.item).forEach(([key, value]) => {
-        setOverride(overrides, itemSystem, `alignments.${key}`, value);
+        setOverride(overrides, item, `system.alignments.${key}`, value);
       });
     }
     if (context.alignments.resolved) {
@@ -91,7 +88,7 @@ export function applyActionUseOverrides(actionUse, context) {
   }
 
   if (context.spellLevel?.effective !== undefined) {
-    setOverride(overrides, itemSystem, "level", context.spellLevel.effective);
+    setOverride(overrides, item, "system.level", context.spellLevel.effective);
   }
 
   if (context.notes?.footer && Array.isArray(context.notes.footer)) {

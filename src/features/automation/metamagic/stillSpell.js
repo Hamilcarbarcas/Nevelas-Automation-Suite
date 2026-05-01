@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "stillSpell",
   name: "Still Spell",
-  prefix: "Still",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.stillSpell") ?? "Still"; },
 };
 
 export function applyStillSpell(context) {
