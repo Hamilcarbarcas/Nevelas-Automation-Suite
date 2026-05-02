@@ -5,3 +5,4 @@ packs/**/LOG.old
 packs/**/LOCK
 packs/**/MANIFEST-*
 packs/**/lost/
+packs/
