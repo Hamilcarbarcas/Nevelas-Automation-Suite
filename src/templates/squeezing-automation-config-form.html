@@ -1,0 +1,61 @@
+<form class="nas-squeezing-config-form" autocomplete="off">
+  <p class="nas-squeezing-config-lead">{{localize "NAS.forms.squeezingAutomationConfig.description"}}</p>
+
+  <div class="form-group">
+    <label for="squeezedHandling">{{localize "NAS.forms.squeezingAutomationConfig.labels.squeezedHandling"}}</label>
+    <select name="squeezedHandling">
+      {{#select squeezedHandling}}
+        {{#each squeezedHandlingChoices as |label key|}}
+          <option value="{{key}}">{{label}}</option>
+        {{/each}}
+      {{/select}}
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="squeezedExitHandling">{{localize "NAS.forms.squeezingAutomationConfig.labels.squeezedExitHandling"}}</label>
+    <select name="squeezedExitHandling">
+      {{#select squeezedExitHandling}}
+        {{#each squeezedExitHandlingChoices as |label key|}}
+          <option value="{{key}}">{{label}}</option>
+        {{/each}}
+      {{/select}}
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="squeezedEscapeFailureHandling">{{localize "NAS.forms.squeezingAutomationConfig.labels.squeezedEscapeFailureHandling"}}</label>
+    <select name="squeezedEscapeFailureHandling">
+      {{#select squeezedEscapeFailureHandling}}
+        {{#each squeezedEscapeFailureHandlingChoices as |label key|}}
+          <option value="{{key}}">{{label}}</option>
+        {{/each}}
+      {{/select}}
+    </select>
+  </div>
+
+  <hr />
+  <p class="nas-squeezing-config-lead">{{localize "NAS.forms.squeezingAutomationConfig.sizeDescription"}}</p>
+
+  <div class="form-group">
+    <label for="squeezingMediumBodyWidth">{{localize "NAS.forms.squeezingAutomationConfig.labels.squeezingMediumBodyWidth"}}</label>
+    <input type="number" name="squeezingMediumBodyWidth" value="{{squeezingMediumBodyWidth}}" min="0.05" step="0.05" />
+  </div>
+
+  <div class="form-group">
+    <label for="squeezingMediumHeadWidth">{{localize "NAS.forms.squeezingAutomationConfig.labels.squeezingMediumHeadWidth"}}</label>
+    <input type="number" name="squeezingMediumHeadWidth" value="{{squeezingMediumHeadWidth}}" min="0" step="0.05" />
+  </div>
+
+  <div class="form-group">
+    <label for="squeezingEscapeArtistDC">{{localize "NAS.forms.squeezingAutomationConfig.labels.squeezingEscapeArtistDC"}}</label>
+    <input type="number" name="squeezingEscapeArtistDC" value="{{squeezingEscapeArtistDC}}" min="0" step="1" />
+  </div>
+
+  <footer class="sheet-footer flexrow">
+    <button type="submit" name="submit">
+      <i class="fas fa-save"></i> {{localize "NAS.common.buttons.save"}}
+    </button>
+  </footer>
+</form>
+

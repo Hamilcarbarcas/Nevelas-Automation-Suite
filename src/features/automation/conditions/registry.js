@@ -1,5 +1,6 @@
 
 import { MODULE } from '../../../common/module.js';
+import { CONCEALED_CONDITION_ID } from './concealed/concealed.js';
 
 export function registerConditions(registry) {
   registry.tracks.push("immobilize");
@@ -18,7 +19,7 @@ export function registerConditions(registry) {
         name: game.i18n.localize("NAS.conditions.list.anchored.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/anchored.png",
+        texture: "modules/nevelas-automation-suite/src/icons/anchored.svg",
         track: "immobilize"
       }
     },
@@ -35,13 +36,13 @@ export function registerConditions(registry) {
         name: game.i18n.localize("NAS.conditions.list.burning.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/burning.png",
+        texture: "modules/nevelas-automation-suite/src/icons/burning.svg",
         track: ""
       }
     },
     {
       namespace: MODULE.ID,
-      key: "concealment",
+      key: "concealed",
       value: {
         journal: "Compendium.nevelas-automation-suite.Conditions.JournalEntry.7OPIeT3M6ahk31kn.JournalEntryPage.kfctyAUASIwxLFYG",
         flags: {},
@@ -49,10 +50,10 @@ export function registerConditions(registry) {
           changes: [],
           flags: []
         },
-        name: game.i18n.localize("NAS.conditions.list.concealment.label"),
+        name: game.i18n.localize("NAS.conditions.list.concealed.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/concealment.png",
+        texture: "modules/nevelas-automation-suite/src/icons/concealed.svg",
         track: ""
       }
     },
@@ -69,7 +70,7 @@ export function registerConditions(registry) {
         name: game.i18n.localize("NAS.conditions.list.energyDrained.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/drained.png",
+        texture: "modules/nevelas-automation-suite/src/icons/drained.svg",
         track: ""
       }
     },
@@ -88,7 +89,7 @@ export function registerConditions(registry) {
         name: game.i18n.localize("NAS.conditions.list.fascinated.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/fascinated.png",
+        texture: "modules/nevelas-automation-suite/src/icons/fascinated.svg",
         track: ""
       }
     },
@@ -99,15 +100,38 @@ export function registerConditions(registry) {
         journal: "Compendium.nevelas-automation-suite.Conditions.JournalEntry.7OPIeT3M6ahk31kn.JournalEntryPage.QeJmifftmLMo2MOl",
         flags: {},
         mechanics: {
-          changes: [],
+          changes: [
+            {"formula": "-4", "operator": "add", "target": "dexPen", "type": "untyped", "priority": 0}, 
+            {"formula": "-2", "operator": "add", "target": "attack", "type": "untyped", "priority": 0}
+          ],
           flags: []
         },
         name: game.i18n.localize("NAS.conditions.list.grappling.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/grappling.png",
+        texture: "modules/nevelas-automation-suite/src/icons/grappling.svg",
         track: "",
         statuses: new Set(["slowed"])
+      }
+    },
+    {
+      namespace: MODULE.ID,
+      key: "squeezed",
+      value: {
+        journal: "Compendium.pf1.pf1e-rules.JournalEntry.NSqfXaj4MevUR2uJ.JournalEntryPage.jzeZ0Uf31CAMZra9",
+        flags: {},
+        mechanics: {
+          changes: [
+            { formula: "-4", operator: "add", target: "attack", type: "untyped", priority: 0 },
+            { formula: "-4", operator: "add", target: "ac", type: "untyped", priority: 0 }
+          ],
+          flags: ["loseDexToAC"]
+        },
+        name: game.i18n.localize("NAS.conditions.list.squeezed.label"),
+        showInAction: true,
+        showInDefense: true,
+        texture: "modules/nevelas-automation-suite/src/icons/squeezed.svg",
+        track: ""
       }
     },
     {
@@ -118,12 +142,12 @@ export function registerConditions(registry) {
         flags: {},
         mechanics: {
           changes: [],
-          flags: ["loseDexToAC"]
+          flags: []
         },
         name: game.i18n.localize("NAS.conditions.list.immobilized.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/immobilized.png",
+        texture: "modules/nevelas-automation-suite/src/icons/immobilized.svg",
         track: ""
       }
     },
@@ -171,7 +195,7 @@ export function registerConditions(registry) {
         name: game.i18n.localize("NAS.conditions.list.slowed.label"),
         showInAction: true,
         showInDefense: true,
-        texture: "modules/nevelas-automation-suite/src/icons/slowed.png",
+        texture: "modules/nevelas-automation-suite/src/icons/slowed.svg",
         track: ""
       }
     }
@@ -201,6 +225,13 @@ export function registerConditions(registry) {
   if (entangled) {
     entangled.updateSource({ track: "immobilize" });
   }
+
+  const invisible = registry.get("invisible");
+  if (invisible) {
+    invisible.updateSource({
+      statuses: new Set([...(invisible.statuses ?? []), CONCEALED_CONDITION_ID])
+    });
+  }
 }
 
 
@@ -213,6 +244,6 @@ export function setupConditionsI18n(t) {
   t.conditions.burning = "NAS.conditions.list.burning.description";
   t.conditions.grappling = "NAS.conditions.list.grappling.description";
   t.conditions.grappled = "NAS.conditions.list.grappled.description";
-  t.conditions.concealment = "NAS.conditions.list.concealment.description";
+  t.conditions.squeezed = "NAS.conditions.list.squeezed.description";
+  t.conditions.concealed = "NAS.conditions.list.concealed.description";
 } 
-

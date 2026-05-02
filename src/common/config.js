@@ -1,10 +1,13 @@
 import { MODULE } from "./module.js";
+import { checkboxChecked, elementFromHtmlLike, insertNasSettingsSectionsContainer, setElementVisible } from "./foundryCompat.js";
 import { DamagePriorityForm } from "./settings/damagePriorityForm.js";
 import { DamageTypeFormApplication } from "./settings/damageTypeForm.js";
 import { TranslationForm } from "./settings/translationForm.js";
 import { BuffCompendiaSelector } from "./settings/buffCompendiaSelector.js";
 import { ModifierNameSettingsForm } from "./settings/modifierNameSettingsForm.js";
 import { VariantMappingManager } from "./settings/variantMappingManager.js";
+import { WoundDamageTypesForm } from "./settings/woundDamageTypesForm.js";
+import { SqueezingAutomationConfigForm } from "./settings/squeezingAutomationConfigForm.js";
 import { MigrationSettingsMenu } from "./migrations.js";
 
 export const damageConfig = {
@@ -70,6 +73,33 @@ function registerSettings() {
         default: "current"
     });
 
+    game.settings.register(MODULE.ID, "metamagicChatCardNameMode", {
+        name: game.i18n.localize("NAS.settings.metamagicChatCardNameMode.name"),
+        hint: game.i18n.localize("NAS.settings.metamagicChatCardNameMode.hint"),
+        scope: "world",
+        config: true,
+        type: String,
+        choices: {
+            off: game.i18n.localize("NAS.settings.metamagicChatCardNameMode.choices.off"),
+            highest: game.i18n.localize("NAS.settings.metamagicChatCardNameMode.choices.highest")
+        },
+        default: "highest"
+    });
+
+    game.settings.register(MODULE.ID, "metamagicPreviewMode", {
+        name: game.i18n.localize("NAS.settings.metamagicPreviewMode.name"),
+        hint: game.i18n.localize("NAS.settings.metamagicPreviewMode.hint"),
+        scope: "world",
+        config: true,
+        type: String,
+        choices: {
+            none: game.i18n.localize("NAS.common.labels.none"),
+            concise: game.i18n.localize("NAS.settings.metamagicPreviewMode.choices.concise"),
+            detailed: game.i18n.localize("NAS.settings.metamagicPreviewMode.choices.detailed")
+        },
+        default: "concise"
+    });
+
     game.settings.register(MODULE.ID, "saveRollTokenInteraction", {
         name: game.i18n.localize("NAS.settings.saveRollTokenInteraction.name"),
         hint: game.i18n.localize("NAS.settings.saveRollTokenInteraction.hint"),
@@ -78,6 +108,56 @@ function registerSettings() {
         type: Boolean,
         default: true
     });
+
+    game.settings.register(MODULE.ID, "enhancedDiceTooltipMode", {
+        name: game.i18n.localize("NAS.settings.enhancedDiceTooltipMode.name"),
+        hint: game.i18n.localize("NAS.settings.enhancedDiceTooltipMode.hint"),
+        scope: "world",
+        config: true,
+        type: String,
+        choices: {
+            off: game.i18n.localize("NAS.settings.enhancedDiceTooltipMode.choices.off"),
+            labeled: game.i18n.localize("NAS.settings.enhancedDiceTooltipMode.choices.labeled"),
+            detailed: game.i18n.localize("NAS.settings.enhancedDiceTooltipMode.choices.detailed")
+        },
+        default: "labeled"
+    });
+
+  game.settings.register(MODULE.ID, "enhancedCombatText", {
+    name: game.i18n.localize("NAS.settings.enhancedCombatText.name"),
+    hint: game.i18n.localize("NAS.settings.enhancedCombatText.hint"),
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register(MODULE.ID, "combatTextMode", {
+    name: game.i18n.localize("NAS.settings.combatTextMode.name"),
+    hint: game.i18n.localize("NAS.settings.combatTextMode.hint"),
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      off: game.i18n.localize("NAS.settings.combatTextMode.choices.off"),
+      enhanced: game.i18n.localize("NAS.settings.combatTextMode.choices.enhanced"),
+      cinematic: game.i18n.localize("NAS.settings.combatTextMode.choices.cinematic")
+    },
+    default: "off"
+  });
+
+  game.settings.register(MODULE.ID, "cinematicCombatTextPreset", {
+    name: game.i18n.localize("NAS.settings.cinematicCombatTextPreset.name"),
+    hint: game.i18n.localize("NAS.settings.cinematicCombatTextPreset.hint"),
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      arcLanes: game.i18n.localize("NAS.settings.cinematicCombatTextPreset.choices.arcLanes"),
+      tokenSides: game.i18n.localize("NAS.settings.cinematicCombatTextPreset.choices.tokenSides")
+    },
+    default: "arcLanes"
+  });
 
     game.settings.register(MODULE.ID, "damageTypePriority", {
         name: game.i18n.localize("NAS.settings.damageTypePriority.name"),
@@ -90,7 +170,7 @@ function registerSettings() {
 
     game.settings.registerMenu(MODULE.ID, "damageTypePriorityMenu", {
         name: game.i18n.localize("NAS.settings.damageTypePriorityMenu.name"),
-        label: game.i18n.localize("NAS.settings.damageTypePriorityMenu.label"),
+        label: game.i18n.localize("NAS.common.buttons.configure"),
         hint: game.i18n.localize("NAS.settings.damageTypePriorityMenu.hint"),
         icon: "fas fa-cogs",
         type: DamagePriorityForm,
@@ -115,14 +195,18 @@ function registerSettings() {
     });
 
     game.settings.register(MODULE.ID, "translations", {
-        name: "Translation Settings",
+        name: game.i18n.localize("NAS.settings.translations.name"),
         scope: "world",
         config: false,
         type: Object,
         default: {
             hardness: "",
             construct: "",
-            undead: ""
+            undead: "",
+            constructClassNames: "",
+            undeadClassNames: "",
+            constructRaceNames: "",
+            undeadRaceNames: ""
         }
     });
 
@@ -134,9 +218,9 @@ function registerSettings() {
     });
 
     game.settings.registerMenu(MODULE.ID, "translationMenu", {
-        name: "Configure Translations",
-        label: "Translations",
-        hint: "Set the translations for various terms for the module to recognize.",
+        name: game.i18n.localize("NAS.settings.translationMenu.name"),
+        label: game.i18n.localize("NAS.settings.translationMenu.label"),
+        hint: game.i18n.localize("NAS.settings.translationMenu.hint"),
         icon: "fas fa-language",
         type: TranslationForm,
         restricted: true
@@ -144,7 +228,7 @@ function registerSettings() {
     
     if (!game.settings.settings.has(`${MODULE.ID}.migrationVersion`)) {
         game.settings.register(MODULE.ID, "migrationVersion", {
-            name: "Migration Version",
+            name: game.i18n.localize("NAS.settings.migrationVersion.name"),
             scope: "world",
             config: false,
             type: String,
@@ -154,9 +238,9 @@ function registerSettings() {
 
     if (!game.settings.settings.has(`${MODULE.ID}.migrationTool`)) {
         game.settings.registerMenu(MODULE.ID, "migrationTool", {
-            name: "Run Legacy Migration",
-            label: "Open Migration Tool",
-            hint: "Copy legacy module data into this module's settings and flags.",
+            name: game.i18n.localize("NAS.settings.migrationTool.name"),
+            label: game.i18n.localize("NAS.settings.migrationTool.label"),
+            hint: game.i18n.localize("NAS.settings.migrationTool.hint"),
             icon: "fas fa-database",
             type: MigrationSettingsMenu,
             restricted: true
@@ -356,7 +440,7 @@ async function performMigration() {
         });
 
         if (damageTypesToReRegister.length > 0) {
-            ui.notifications.info("Starting migration for custom damage types...");
+            ui.notifications.info(game.i18n.localize("NAS.settings.config.migrationStartInfo"));
 
             unregisterDamageTypes(damageTypesToReRegister);
 
@@ -364,7 +448,7 @@ async function performMigration() {
 
             reRegisterDamageTypes(damageTypesToReRegister);
 
-            ui.notifications.info("Migration completed successfully!");
+            ui.notifications.info(game.i18n.localize("NAS.settings.config.migrationCompleteInfo"));
         }
     }
 }
@@ -391,6 +475,7 @@ function reRegisterDamageTypes(damageTypesToReRegister) {
     console.log("Re-registered damage types:", damageTypesToReRegister.map(dt => dt.key));
 }
 
+
 export const moduleConfig = {
     damageConfig,
     registerSettings,
@@ -401,6 +486,11 @@ export const moduleConfig = {
     syncWeaponDamageTypes,
     populateDefaultTypes
 };
+
+  
+
+
+
 let _nasSettingsRegistered = false;
 
 export function registerNasSettings() {
@@ -408,8 +498,82 @@ export function registerNasSettings() {
   _nasSettingsRegistered = true;
 
   game.settings.register(MODULE.ID, 'reorderAllConditions', {
-    name: "Reorder All Conditions Alphabetically",
-    hint: 'Toggle to reorder all conditions alphabetically or only new conditions added by this module.',
+    name: game.i18n.localize("NAS.settings.reorderAllConditions.name"),
+    hint: game.i18n.localize("NAS.settings.reorderAllConditions.hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+
+  game.settings.register(MODULE.ID, 'enableDamageAutomation', {
+    name: game.i18n.localize("NAS.settings.enableDamageAutomation.name"),
+    hint: game.i18n.localize("NAS.settings.enableDamageAutomation.hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+  });
+
+  game.settings.register(MODULE.ID, 'enableWoundsVigorAutomation', {
+    name: game.i18n.localize("NAS.settings.enableWoundsVigorAutomation.name"),
+    hint: game.i18n.localize("NAS.settings.enableWoundsVigorAutomation.hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+
+  game.settings.register(MODULE.ID, 'woundsVigorActionTaxMode', {
+    name: game.i18n.localize("NAS.settings.woundsVigorActionTaxMode.name"),
+    hint: game.i18n.localize("NAS.settings.woundsVigorActionTaxMode.hint"),
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      strict: game.i18n.localize("NAS.settings.woundsVigorActionTaxMode.choices.strict"),
+      broad: game.i18n.localize("NAS.settings.woundsVigorActionTaxMode.choices.broad")
+    },
+    default: "strict",
+  });
+
+  game.settings.register(MODULE.ID, 'woundsVigorNoWoundsConstructUndead', {
+    name: game.i18n.localize("NAS.settings.woundsVigorNoWoundsConstructUndead.name"),
+    hint: game.i18n.localize("NAS.settings.woundsVigorNoWoundsConstructUndead.hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+
+  game.settings.register(MODULE.ID, "woundsVigorWoundDamageTypeIds", {
+    scope: "world",
+    config: false,
+    type: Array,
+    default: ["negative", "positive"]
+  });
+
+  game.settings.registerMenu(MODULE.ID, "woundsVigorWoundDamageTypeMenu", {
+    name: game.i18n.localize("NAS.forms.woundDamageTypesForm.title"),
+    label: game.i18n.localize("NAS.common.buttons.configure"),
+    hint: game.i18n.localize("NAS.settings.woundsVigorWoundDamageTypeMenu.hint"),
+    icon: "fas fa-heart-pulse",
+    type: WoundDamageTypesForm,
+    restricted: true
+  });
+
+  game.settings.register(MODULE.ID, 'enableMetamagicAutomation', {
+    name: game.i18n.localize("NAS.settings.enableMetamagicAutomation.name"),
+    hint: game.i18n.localize("NAS.settings.enableMetamagicAutomation.hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+  });
+
+  game.settings.register(MODULE.ID, "enforceSpellAbilityMinimum", {
+    name: game.i18n.localize("NAS.settings.enforceSpellAbilityMinimum.name"),
+    hint: game.i18n.localize("NAS.settings.enforceSpellAbilityMinimum.hint"),
     scope: "world",
     config: true,
     type: Boolean,
@@ -417,8 +581,8 @@ export function registerNasSettings() {
   });
 
   game.settings.register(MODULE.ID, 'automaticBuffs', {
-    name: 'Enable Automatic Buffs',
-    hint: 'When enabled, the module will attempt to find and apply matching buffs when spells or consumables are used.',
+    name: game.i18n.localize("NAS.settings.automaticBuffs.name"),
+    hint: game.i18n.localize("NAS.settings.automaticBuffs.hint"),
     scope: 'world',
     config: true,
     type: Boolean,
@@ -426,58 +590,67 @@ export function registerNasSettings() {
   });
   
   game.settings.register(MODULE.ID, 'buffAutomationMode', {
-    name: 'Buff Automation Mode',
-    hint: 'Choose how strict the buff automation should be when no targets are selected.',
+    name: game.i18n.localize("NAS.settings.buffAutomationMode.name"),
+    hint: game.i18n.localize("NAS.settings.buffAutomationMode.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      "strict": "Strict (Block actions without targets)",
-      "lenient": "Lenient (Allow, but notify if no targets)"
+      "strict": game.i18n.localize("NAS.settings.buffAutomationMode.choices.strict"),
+      "lenient": game.i18n.localize("NAS.settings.buffAutomationMode.choices.lenient")
     },
     default: "strict"
   });
   
   game.settings.register(MODULE.ID, 'buffTargetFiltering', {
-    name: 'Buff Target Filtering',
-    hint: 'Choose how buff targets are filtered. "By Disposition" only applies buffs to targets with the same disposition as the caster, "All Targets" applies buffs to all selected targets, and "Manual Selection" prompts you to choose which targets receive the buff.',
+    name: game.i18n.localize("NAS.settings.buffTargetFiltering.name"),
+    hint: game.i18n.localize("NAS.settings.buffTargetFiltering.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      "byDisposition": "By Disposition (Only same disposition)",
-      "allTargets": "All Targets (No filtering)",
-      "manualSelection": "Manual Selection (Choose targets)"
+      "byDisposition": game.i18n.localize("NAS.settings.buffTargetFiltering.choices.disposition"),
+      "allTargets": game.i18n.localize("NAS.settings.buffTargetFiltering.choices.all"),
+      "manualSelection": game.i18n.localize("NAS.settings.buffTargetFiltering.choices.manual")
     },
     default: "byDisposition"
   });
   
   game.settings.registerMenu(MODULE.ID, 'buffCompendiaSelector', {
-    name: 'Select Buff Compendia',
-    label: 'Select Compendia',
-    hint: 'Choose which compendia to include when searching for buff items.',
+    name: game.i18n.localize("NAS.forms.buffCompendiaSelector.title"),
+    label: game.i18n.localize("NAS.settings.buffCompendiaSelector.label"),
+    hint: game.i18n.localize("NAS.settings.buffCompendiaSelector.hint"),
     icon: 'fas fa-book',
     type: BuffCompendiaSelector,
     restricted: true
   });
 
-  const defaultCompendia = ["pf1.buffs"];
+  const defaultCompendia = ["pf1.buffs", `${MODULE.ID}.Buffs`];
   if (game.packs.get("pf-content.pf-buffs")) {
     defaultCompendia.push("pf-content.pf-buffs");
   }
 
   game.settings.register(MODULE.ID, 'customBuffCompendia', {
-    name: 'Custom Buff Compendia',
-    hint: 'Select additional compendia containing buffs to include in the automated buff search.',
+    name: game.i18n.localize("NAS.settings.customBuffCompendia.name"),
+    hint: game.i18n.localize("NAS.settings.customBuffCompendia.hint"),
     scope: 'world',
     config: false,
     type: Array,
     default: defaultCompendia,
   });
 
+  game.settings.register(MODULE.ID, 'automateConditions', {
+    name: game.i18n.localize("NAS.settings.automateConditions.name"),
+    hint: game.i18n.localize("NAS.settings.automateConditions.hint"),
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE.ID, 'handleConfused', {
-    name: 'Automate Confused Condition Actions',
-    hint: 'Enable to automatically generate a message at the start of each round to determine the actions of confused tokens.',
+    name: game.i18n.localize("NAS.settings.handleConfused.name"),
+    hint: game.i18n.localize("NAS.settings.handleConfused.hint"),
     scope: 'world',
     config: true,
     type: Boolean,
@@ -485,31 +658,40 @@ export function registerNasSettings() {
   });
 
   game.settings.register(MODULE.ID, 'restrictMovement', {
-    name: "Restrict Movement",
-    hint: "Choose who is restricted from moving when affected by immobilizing conditions such as 'anchored', 'cowering', 'dazed', 'dying', 'helpless', 'paralyzed', 'petrified', or 'pinned'. 'Players Only' allows GMs to always move tokens. 'Disabled' will allow all movement.",
+    name: game.i18n.localize("NAS.settings.restrictMovement.name"),
+    hint: game.i18n.localize("NAS.settings.restrictMovement.hint"),
     scope: "world",
     config: true,
     type: String,
     choices: {
-      "all": "All (GM and Players)",
-      "players": "Players Only (GM can always move)",
-      "disabled": "Disabled"
+        "all": game.i18n.localize("NAS.settings.restrictMovement.choices.all"),
+        "players": game.i18n.localize("NAS.settings.restrictMovement.choices.players"),
+        "disabled": game.i18n.localize("NAS.common.choices.handling.disabled")
     },
     default: "disabled",
   });
 
   game.settings.register(MODULE.ID, 'autoApplyFF', {
-    name: "Auto Apply Flat-Footed Condition",
-    hint: "Enable to automatically apply the flat-footed condition to any token with an initiative roll result lower than the highest when combat begins.",
+    name: game.i18n.localize("NAS.settings.autoApplyFF.name"),
+    hint: game.i18n.localize("NAS.settings.autoApplyFF.hint"),
     scope: "world",
     config: true,
     type: Boolean,
     default: true,
   });
 
+  game.settings.register(MODULE.ID, 'skipSurprisedTokens', {
+    name: game.i18n.localize("NAS.settings.skipSurprisedTokens.name"),
+    hint: game.i18n.localize("NAS.settings.skipSurprisedTokens.hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+
   game.settings.register(MODULE.ID, 'blindMovementCheck', {
-    name: 'Enable Blind Movement Notification',
-    hint: 'Enable to notify users to roll an Acrobatics check when a blind token attempts to move.',
+    name: game.i18n.localize("NAS.settings.blindMovementCheck.name"),
+    hint: game.i18n.localize("NAS.settings.blindMovementCheck.hint"),
     scope: 'world',
     config: true,
     type: Boolean,
@@ -517,23 +699,23 @@ export function registerNasSettings() {
   });
 
   game.settings.register(MODULE.ID, 'disableAtZeroHP', {
-    name: 'Apply Disabled Condition at 0 HP',
-    hint: 'Automatically apply the disabled condition based on the selected option.',
+    name: game.i18n.localize("NAS.settings.disableAtZeroHP.name"),
+    hint: game.i18n.localize("NAS.settings.disableAtZeroHP.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-        "none": "No one",
-        "npc": "NPC Only",
-        "player": "Player Only",
-        "everyone": "Everyone"
+        "none": game.i18n.localize("NAS.common.choices.audience.none"),
+        "npc": game.i18n.localize("NAS.common.choices.audience.npc"),
+        "player": game.i18n.localize("NAS.common.choices.audience.player"),
+        "everyone": game.i18n.localize("NAS.common.choices.audience.everyone")
     },
     default: "everyone"
   });
 
   game.settings.register(MODULE.ID, 'autoApplyED', {
-    name: 'Auto Apply Energy Drain',
-    hint: 'Enable to automatically apply the energy drain condition to any token with negative levels.',
+    name: game.i18n.localize("NAS.settings.autoApplyED.name"),
+    hint: game.i18n.localize("NAS.settings.autoApplyED.hint"),
     scope: 'world',
     config: true,
     type: Boolean,
@@ -541,75 +723,169 @@ export function registerNasSettings() {
   });
 
   game.settings.register(MODULE.ID, 'entangledGrappledHandling', {
-    name: 'Concentration Check for Entangled and Grappled',
-    hint: 'Choose whether to prompt concentration checks for entangled and/or grappled spellcasting.',
+    name: game.i18n.localize("NAS.settings.entangledGrappledHandling.name"),
+    hint: game.i18n.localize("NAS.settings.entangledGrappledHandling.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      disabled: 'Disabled',
-      grappled: 'Only Grappled',
-      entangled: 'Only Entangled',
-      both: 'Both'
+      disabled: game.i18n.localize("NAS.common.choices.handling.disabled"),
+      grappled: game.i18n.localize("NAS.settings.entangledGrappledHandling.choices.grappled"),
+      entangled: game.i18n.localize("NAS.settings.entangledGrappledHandling.choices.entangled"),
+      both: game.i18n.localize("NAS.settings.entangledGrappledHandling.choices.both")
     },
     default: 'disabled'
   });
 
   game.settings.register(MODULE.ID, 'grappledHandling', {
-    name: 'Grappled Action Handling',
-    hint: 'Choose how actions requiring two hands should be handled when grappled: Strict, Lenient, or Disabled.',
+    name: game.i18n.localize("NAS.settings.grappledHandling.name"),
+    hint: game.i18n.localize("NAS.settings.grappledHandling.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      "disabled": "Disabled (No restrictions)",
-      "strict": "Strict (Block two-handed actions)",
-      "lenient": "Lenient (Allow with warning)"
+      "disabled": game.i18n.localize("NAS.common.choices.handling.disabledNoRestrictions"),
+      "strict": game.i18n.localize("NAS.settings.grappledHandling.choices.strict"),
+      "lenient": game.i18n.localize("NAS.common.choices.handling.lenientWarning")
     },
     default: "strict"
   });  
   
   game.settings.register(MODULE.ID, 'nauseatedHandling', {
-    name: 'Nauseated Action Handling',
-    hint: 'Choose how actions are handled when affected by the nauseated condition: Strict, Lenient, or Disabled.',
+    name: game.i18n.localize("NAS.settings.nauseatedHandling.name"),
+    hint: game.i18n.localize("NAS.settings.nauseatedHandling.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      "disabled": "Disabled (No restrictions)",
-      "strict": "Strict (Block non-move actions)",
-      "lenient": "Lenient (Allow with warning)"
+      "disabled": game.i18n.localize("NAS.common.choices.handling.disabledNoRestrictions"),
+      "strict": game.i18n.localize("NAS.settings.nauseatedHandling.choices.strict"),
+      "lenient": game.i18n.localize("NAS.common.choices.handling.lenientWarning")
     },
     default: "strict"
   });
-  
-  game.settings.register(MODULE.ID, 'squeezingHandling', {
-    name: 'Squeezing Action Handling',
-    hint: 'Choose how actions are handled when affected by the squeezing condition: Strict, Lenient, or Disabled.',
+
+  game.settings.register(MODULE.ID, 'automateSqueezing', {
+    name: game.i18n.localize("NAS.settings.automateSqueezing.name"),
+    hint: game.i18n.localize("NAS.settings.automateSqueezing.hint"),
     scope: 'world',
     config: true,
+    type: Boolean,
+    default: true
+  });
+  
+  game.settings.register(MODULE.ID, 'squeezedHandling', {
+    name: game.i18n.localize("NAS.settings.squeezedHandling.name"),
+    hint: game.i18n.localize("NAS.settings.squeezedHandling.hint"),
+    scope: 'world',
+    config: false,
     type: String,
     choices: {
-      "disabled": "Disabled (No restrictions)",
-      "strict": "Strict (Block attack actions)",
-      "lenient": "Lenient (Allow with warning)"
+      "disabled": game.i18n.localize("NAS.common.choices.handling.disabledNoRestrictions"),
+      "strict": game.i18n.localize("NAS.settings.squeezedHandling.choices.strict"),
+      "lenient": game.i18n.localize("NAS.common.choices.handling.lenientWarning")
     },
     default: "strict"
   });  
 
+  game.settings.register(MODULE.ID, 'squeezedExitHandling', {
+    name: game.i18n.localize("NAS.settings.squeezedExitHandling.name"),
+    hint: game.i18n.localize("NAS.settings.squeezedExitHandling.hint"),
+    scope: 'world',
+    config: false,
+    type: String,
+    choices: {
+      "count": game.i18n.localize("NAS.settings.squeezedExitHandling.choices.count"),
+      "ignore": game.i18n.localize("NAS.settings.squeezedExitHandling.choices.ignore")
+    },
+    default: "count"
+  });
+
+  game.settings.register(MODULE.ID, 'squeezedEscapeFailureHandling', {
+    name: game.i18n.localize("NAS.settings.squeezedEscapeFailureHandling.name"),
+    hint: game.i18n.localize("NAS.settings.squeezedEscapeFailureHandling.hint"),
+    scope: 'world',
+    config: false,
+    type: String,
+    choices: {
+      "stopBeforeNarrow": game.i18n.localize("NAS.settings.squeezedEscapeFailureHandling.choices.stopBeforeNarrow"),
+      "enterFirstNarrowSquare": game.i18n.localize("NAS.settings.squeezedEscapeFailureHandling.choices.enterFirstNarrowSquare")
+    },
+    default: "stopBeforeNarrow"
+  });
+
+  game.settings.register(MODULE.ID, 'squeezingMediumBodyWidth', {
+    name: game.i18n.localize("NAS.settings.squeezingMediumBodyWidth.name"),
+    hint: game.i18n.localize("NAS.settings.squeezingMediumBodyWidth.hint"),
+    scope: 'world',
+    config: false,
+    type: Number,
+    default: 0.75
+  });
+
+  game.settings.register(MODULE.ID, 'squeezingMediumHeadWidth', {
+    name: game.i18n.localize("NAS.settings.squeezingMediumHeadWidth.name"),
+    hint: game.i18n.localize("NAS.settings.squeezingMediumHeadWidth.hint"),
+    scope: 'world',
+    config: false,
+    type: Number,
+    default: 0.25
+  });
+
+  game.settings.register(MODULE.ID, 'squeezingEscapeArtistDC', {
+    name: game.i18n.localize("NAS.settings.squeezingEscapeArtistDC.name"),
+    hint: game.i18n.localize("NAS.settings.squeezingEscapeArtistDC.hint"),
+    scope: 'world',
+    config: false,
+    type: Number,
+    default: 30
+  });
+
+  game.settings.registerMenu(MODULE.ID, 'squeezingAutomationConfig', {
+    name: game.i18n.localize("NAS.forms.squeezingAutomationConfig.title"),
+    label: game.i18n.localize("NAS.common.buttons.configure"),
+    hint: game.i18n.localize("NAS.settings.squeezingAutomationConfig.hint"),
+    icon: 'fas fa-arrows-left-right',
+    type: SqueezingAutomationConfigForm,
+    restricted: true
+  });
+
   game.settings.register(MODULE.ID, 'unconsciousAtNegativeHP', {
-      name: 'Apply Unconscious Condition at Negative HP',
-      hint: 'Automatically apply the unconscious condition based on the selected option.',
+      name: game.i18n.localize("NAS.settings.unconsciousAtNegativeHP.name"),
+      hint: game.i18n.localize("NAS.settings.unconsciousAtNegativeHP.hint"),
       scope: 'world',
       config: true,
       type: String,
       choices: {
-          "none": "No one",
-          "npc": "NPC Only",
-          "player": "Player Only",
-          "everyone": "Everyone"
+          "none": game.i18n.localize("NAS.common.choices.audience.none"),
+          "npc": game.i18n.localize("NAS.common.choices.audience.npc"),
+          "player": game.i18n.localize("NAS.common.choices.audience.player"),
+          "everyone": game.i18n.localize("NAS.common.choices.audience.everyone")
       },
       default: "everyone"
+  });
+
+  game.settings.register(MODULE.ID, 'enableDyingAutomation', {
+    name: game.i18n.localize("NAS.settings.enableDyingAutomation.name"),
+    hint: game.i18n.localize("NAS.settings.enableDyingAutomation.hint"),
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register(MODULE.ID, 'dyingHandling', {
+    name: game.i18n.localize("NAS.settings.dyingHandling.name"),
+    hint: game.i18n.localize("NAS.settings.dyingHandling.hint"),
+    scope: 'world',
+    config: true,
+    type: String,
+    choices: {
+      "disabled": game.i18n.localize("NAS.common.choices.handling.disabledNoRestrictions"),
+      "strict": game.i18n.localize("NAS.settings.dyingHandling.choices.strict"),
+      "lenient": game.i18n.localize("NAS.common.choices.handling.lenientWarning")
+    },
+    default: "strict"
   });
 
   const isMonksCombatDetailsActive = game.modules.get('monks-combat-details')?.active;
@@ -617,131 +893,133 @@ export function registerNasSettings() {
   const defaultApplyDeadCondition = monksAutoDefeatedSetting !== 'none' ? false : true;
   
   game.settings.register(MODULE.ID, 'applyDeadCondition', {
-    name: 'Apply Dead Condition at Negative HP',
-    hint: `Automatically apply the dead condition based on the selected option (players at negative max HP, NPCs at negative HP).${isMonksCombatDetailsActive ? ' Enabling this option will disable the Monks Combat Details auto defeated setting.' : ''}`,
+    name: game.i18n.localize("NAS.settings.applyDeadCondition.name"),
+    hint: game.i18n.format("NAS.settings.applyDeadCondition.hint", {
+      monksSuffix: isMonksCombatDetailsActive ? game.i18n.localize("NAS.settings.applyDeadCondition.monksSuffix") : ""
+    }),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-        "none": "No one",
-        "npc": "NPC Only",
-        "player": "Player Only",
-        "player-negative-con-npc-negative-hp": "Player (Negative Max), NPC (Negative HP)",
-        "everyone": "Everyone"
+        "none": game.i18n.localize("NAS.common.choices.audience.none"),
+        "npc": game.i18n.localize("NAS.common.choices.audience.npc"),
+        "player": game.i18n.localize("NAS.common.choices.audience.player"),
+        "player-negative-con-npc-negative-hp": game.i18n.localize("NAS.settings.applyDeadCondition.choices.player-negative-con-npc-negative-hp"),
+        "everyone": game.i18n.localize("NAS.common.choices.audience.everyone")
     },
     default: defaultApplyDeadCondition ? "everyone" : "none",
     onChange: async (value) => {
       if (value !== "none" && isMonksCombatDetailsActive) {
         const choice = await Dialog.confirm({
-            title: "Conflict with Monks Combat Details",
-            content: "Enabling this setting will disable the auto-defeated setting of Monks Combat Details. Do you want to proceed?",
+            title: game.i18n.localize("NAS.settings.applyDeadCondition.conflictTitle"),
+            content: game.i18n.localize("NAS.settings.applyDeadCondition.conflictContent"),
             yes: () => true,
             no: () => false,
             defaultYes: false
         });
         if (choice) {
             await game.settings.set('monks-combat-details', 'auto-defeated', 'none');
-            ui.notifications.info("Monks Combat Details auto-defeated setting has been disabled.");
+            ui.notifications.info(game.i18n.localize("NAS.settings.applyDeadCondition.monksDisabledInfo"));
         } else {
             await game.settings.set(MODULE.ID, 'applyDeadCondition', 'none');
-            ui.notifications.warn("Apply Dead Condition setting has been disabled.");
+            ui.notifications.warn(game.i18n.localize("NAS.settings.applyDeadCondition.applyDeadDisabledWarning"));
         };
       };
     }
   });
 
   game.settings.register(MODULE.ID, 'removeDeadCondition', {
-    name: 'Auto Remove Dead Condition',
-    hint: 'Choose when to automatically remove the dead condition.',
+    name: game.i18n.localize("NAS.settings.removeDeadCondition.name"),
+    hint: game.i18n.localize("NAS.settings.removeDeadCondition.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      disabled: 'Disabled',
-      aboveNegativeCon: 'When HP is above negative max HP',
-      nonNegative: 'When HP is 0 or more'
+      disabled: game.i18n.localize("NAS.common.choices.handling.disabled"),
+      aboveNegativeCon: game.i18n.localize("NAS.settings.removeDeadCondition.choices.aboveNegativeCon"),
+      nonNegative: game.i18n.localize("NAS.settings.removeDeadCondition.choices.nonNegative")
     },
     default: 'disabled'
   });
 
   game.settings.registerMenu(MODULE.ID, 'modifierNameSettings', {
-    name: 'Customize Buff/Spell Modifiers',
-    label: 'Customize Modifiers',
-    hint: 'Edit the display names for common buff/spell modifiers (e.g., Lesser, Greater, Mass, Communal, etc.)',
+    name: game.i18n.localize("NAS.forms.modifierNames.title"),
+    label: game.i18n.localize("NAS.settings.modifierNameSettings.label"),
+    hint: game.i18n.localize("NAS.settings.modifierNameSettings.hint"),
     icon: 'fas fa-pen',
     type: ModifierNameSettingsForm,
     restricted: true
   });
 
   game.settings.registerMenu(MODULE.ID, 'variantMappingManager', {
-    name: 'Manage Variant Mappings',
-    label: 'Manage Variant Mappings',
-    hint: 'View and remove remembered variant assignments for spells/abilities.',
+    name: game.i18n.localize("NAS.forms.variantMappingManager.title"),
+    label: game.i18n.localize("NAS.forms.variantMappingManager.title"),
+    hint: game.i18n.localize("NAS.settings.variantMappingManager.hint"),
     icon: 'fas fa-list',
     type: VariantMappingManager,
     restricted: true
   });
 
   game.settings.register(MODULE.ID, 'modifierNames', {
-    name: 'Buff/Spell Modifier Names',
-    hint: 'Stores the custom names for buff/spell modifiers.',
+    name: game.i18n.localize("NAS.settings.modifierNames.name"),
+    hint: game.i18n.localize("NAS.settings.modifierNames.hint"),
     scope: 'world',
     config: false,
     type: Object,
     default: {
-      lesser: 'Lesser',
-      minor: 'Minor',
-      improved: 'Improved',
-      greater: 'Greater',
-      major: 'Major',
-      supreme: 'Supreme',
-      mass: 'Mass',
-      communal: 'Communal'
+      lesser: game.i18n.localize("NAS.forms.modifierNames.labels.lesser"),
+      minor: game.i18n.localize("NAS.forms.modifierNames.labels.minor"),
+      improved: game.i18n.localize("NAS.forms.modifierNames.labels.improved"),
+      greater: game.i18n.localize("NAS.forms.modifierNames.labels.greater"),
+      major: game.i18n.localize("NAS.forms.modifierNames.labels.major"),
+      supreme: game.i18n.localize("NAS.forms.modifierNames.labels.supreme"),
+      mass: game.i18n.localize("NAS.forms.modifierNames.labels.mass"),
+      communal: game.i18n.localize("NAS.forms.modifierNames.labels.communal")
     }
   });
 
   game.settings.register(MODULE.ID, 'communalHandling', {
-    name: 'Communal Spell Duration Handling',
-    hint: 'Choose how communal spell durations are divided among targets: divide evenly (prompt if not possible), or always prompt the caster to divide.',
+    name: game.i18n.localize("NAS.settings.communalHandling.name"),
+    hint: game.i18n.localize("NAS.settings.communalHandling.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      even: 'Divide Evenly (Prompt if impossible)',
-      prompt: 'Always Prompt Caster'
+      even: game.i18n.localize("NAS.settings.communalHandling.choices.even"),
+      prompt: game.i18n.localize("NAS.settings.communalHandling.choices.prompt")
     },
     default: 'even'
   });
 
   game.settings.register(MODULE.ID, 'personalTargeting', {
-    name: 'Personal Spell Targeting',
-    hint: 'Choose whether personal spells can target tokens other than the caster.',
+    name: game.i18n.localize("NAS.settings.personalTargeting.name"),
+    hint: game.i18n.localize("NAS.settings.personalTargeting.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      allow: 'Allow targets other than the caster',
-      deny: 'Deny targets that are not the caster'
+      allow: game.i18n.localize("NAS.settings.personalTargeting.choices.allow"),
+      deny: game.i18n.localize("NAS.settings.personalTargeting.choices.deny")
     },
     default: 'deny'
   });
 
   game.settings.register(MODULE.ID, 'variantTargetCap', {
-    name: 'Variant Target Cap Handling',
-    hint: 'When a spell has a detected target cap (e.g., Blessing of Fervor), choose whether to enforce it (cancel if exceeded) or only show a warning hint.',
+    name: game.i18n.localize("NAS.settings.variantTargetCap.name"),
+    hint: game.i18n.localize("NAS.settings.variantTargetCap.hint"),
     scope: 'world',
     config: true,
     type: String,
     choices: {
-      hint: 'Hint only (allow over-cap)',
-      enforce: 'Enforce cap (cancel when exceeded)'
+      hint: game.i18n.localize("NAS.settings.variantTargetCap.choices.warn"),
+      enforce: game.i18n.localize("NAS.settings.variantTargetCap.choices.enforce")
     },
     default: 'hint'
   });
   
   game.settings.register(MODULE.ID, 'pairedBuffMappings', {
-    name: 'Paired Buff Variant Mappings',
-    hint: 'Internal store for per-spell variant to group assignments.',
+    name: game.i18n.localize("NAS.settings.pairedBuffMappings.name"),
+    hint: game.i18n.localize("NAS.settings.pairedBuffMappings.hint"),
     scope: 'world',
     config: false,
     type: Object,
@@ -756,30 +1034,65 @@ function registerNasSettingsUi() {
   if (_nasSettingsUiRegistered) return;
   _nasSettingsUiRegistered = true;
 
+  function getSavedApplicationsScheme() {
+    let applicationsScheme = "dark";
+    try {
+      const uiConfig = game.settings.get("core", "uiConfig");
+      const scheme = uiConfig?.colorScheme?.applications;
+      if (scheme === "light") applicationsScheme = "light";
+    } catch (_err) {
+    }
+    return applicationsScheme;
+  }
+
+  function getSchemeFromUiConfigValue(value) {
+    if (value === "light") return "light";
+    if (value === "dark") return "dark";
+
+    try {
+      return globalThis.matchMedia?.("(prefers-color-scheme: light)")?.matches ? "light" : "dark";
+    } catch (_err) {
+      return "dark";
+    }
+  }
+
+  function applyNasScheme(scheme) {
+    document.querySelectorAll(".nas-settings-sections").forEach((el) => {
+      el.dataset.nasScheme = scheme;
+    });
+  }
+
+  Hooks.on("renderUIConfig", (app, html) => {
+    const root = elementFromHtmlLike(html);
+    const selector = 'select[name="core.uiConfig.colorScheme.applications"]';
+    const sel = root?.querySelector?.(selector);
+    if (!sel) return;
+
+    if (!sel.dataset.nasListenerAttached) {
+      sel.dataset.nasListenerAttached = "true";
+      sel.addEventListener("change", () => {
+        applyNasScheme(getSchemeFromUiConfigValue(sel.value));
+      });
+    }
+
+    applyNasScheme(getSchemeFromUiConfigValue(sel.value));
+  });
+
+  Hooks.on("closeUIConfig", () => {
+    applyNasScheme(getSavedApplicationsScheme());
+  });
+
   Hooks.on('renderSettingsConfig', (app, html, data) => {
   const moduleId = MODULE.ID;
-  const isJQ = typeof html?.find === "function";
+  const root = elementFromHtmlLike(html);
 
-  const tab = isJQ
-    ? html.find(`section.tab[data-tab="${moduleId}"]`)
-    : html.querySelector(`section.tab[data-tab="${moduleId}"]`);
-  const tabEl = isJQ ? tab?.[0] : tab;
+  const tabEl = root?.querySelector?.(`section.tab[data-tab="${moduleId}"]`);
   if (!tabEl) return;
 
   function findFormGroup(selector) {
     if (!tabEl) return null;
-    if (isJQ) {
-      return tab.find(selector).closest(".form-group");
-    }
     const el = tabEl.querySelector(selector);
     return el ? el.closest(".form-group") : null;
-  }
-
-  function asElement(maybeJq) {
-    if (!maybeJq) return null;
-    if (maybeJq instanceof HTMLElement) return maybeJq;
-    if (isJQ && maybeJq[0] instanceof HTMLElement) return maybeJq[0];
-    return null;
   }
 
   function getSettingRow(settingKey) {
@@ -821,24 +1134,30 @@ function registerNasSettingsUi() {
   if (!container) {
     container = document.createElement("div");
     container.classList.add("nas-settings-sections");
-    tabEl.prepend(container);
+    insertNasSettingsSectionsContainer(tabEl, container);
   }
+
+  container.dataset.nasScheme = getSavedApplicationsScheme();
 
   const sections = [
     {
       id: "general",
-      title: "General",
-      open: true,
+      title: game.i18n.localize("NAS.settings.sections.general"),
+      open: false,
       rows: [
         () => getSettingRow("saveRollTokenInteraction"),
+        () => getSettingRow("enhancedDiceTooltipMode"),
+        () => getSettingRow("combatTextMode"),
+        () => getSettingRow("cinematicCombatTextPreset"),
+        () => getSettingRow("enforceSpellAbilityMinimum"),
         () => getSettingRow("reorderAllConditions"),
         () => getMenuRow("migrationTool")
       ]
     },
     {
       id: "buff",
-      title: "Buff Automation",
-      open: true,
+      title: game.i18n.localize("NAS.settings.sections.buff"),
+      open: false,
       rows: [
         () => getSettingRow("automaticBuffs"),
         () => getMenuRow("buffCompendiaSelector"),
@@ -853,9 +1172,14 @@ function registerNasSettingsUi() {
     },
     {
       id: "damage",
-      title: "Damage Automation",
+      title: game.i18n.localize("NAS.settings.sections.damage"),
       open: false,
       rows: [
+        () => getSettingRow("enableDamageAutomation"),
+        () => getSettingRow("enableWoundsVigorAutomation"),
+        () => getSettingRow("woundsVigorActionTaxMode"),
+        () => getSettingRow("woundsVigorNoWoundsConstructUndead"),
+        () => getMenuRow("woundsVigorWoundDamageTypeMenu"),
         () => getSettingRow("massiveDamage"),
         () => getMenuRow("damageTypePriorityMenu"),
         () => getMenuRow("customSetting")
@@ -863,36 +1187,44 @@ function registerNasSettingsUi() {
     },
     {
       id: "condition",
-      title: "Condition Automation",
+      title: game.i18n.localize("NAS.settings.sections.condition"),
       open: false,
       rows: [
+        () => getSettingRow("automateConditions"),
         () => getSettingRow("handleConfused"),
         () => getSettingRow("restrictMovement"),
         () => getSettingRow("autoApplyFF"),
+        () => getSettingRow("skipSurprisedTokens"),
         () => getSettingRow("blindMovementCheck"),
         () => getSettingRow("disableAtZeroHP"),
         () => getSettingRow("autoApplyED"),
         () => getSettingRow("entangledGrappledHandling"),
         () => getSettingRow("grappledHandling"),
         () => getSettingRow("nauseatedHandling"),
-        () => getSettingRow("squeezingHandling"),
+        () => getSettingRow("automateSqueezing"),
+        () => getMenuRow("squeezingAutomationConfig"),
         () => getSettingRow("unconsciousAtNegativeHP"),
+        () => getSettingRow("enableDyingAutomation"),
+        () => getSettingRow("dyingHandling"),
         () => getSettingRow("applyDeadCondition"),
         () => getSettingRow("removeDeadCondition")
       ]
     },
     {
       id: "metamagic",
-      title: "Metamagic Automation",
+      title: game.i18n.localize("NAS.settings.sections.metamagic"),
       open: false,
       rows: [
+        () => getSettingRow("enableMetamagicAutomation"),
         () => getSettingRow("metamagicCastTimeRule"),
-        () => getSettingRow("persistentSpellTargetMode")
+        () => getSettingRow("persistentSpellTargetMode"),
+        () => getSettingRow("metamagicChatCardNameMode"),
+        () => getSettingRow("metamagicPreviewMode")
       ]
     },
     {
       id: "translations",
-      title: "Translations",
+      title: game.i18n.localize("NAS.settings.sections.translations"),
       open: false,
       rows: [() => getMenuRow("translationMenu")]
     }
@@ -917,9 +1249,7 @@ function registerNasSettingsUi() {
     for (const getRow of spec.rows) {
       const row = getRow();
       if (!row) continue;
-      const rowEl = asElement(row);
-      if (!rowEl) continue;
-      body.appendChild(rowEl);
+      body.appendChild(row);
     }
   }
 
@@ -933,24 +1263,11 @@ function registerNasSettingsUi() {
   const personalTargetingRow = getSettingRow("personalTargeting");
   const variantTargetCapRow = getSettingRow("variantTargetCap");
 
-  let automaticBuffsCheckbox;
-  if (isJQ) {
-    automaticBuffsCheckbox = automaticBuffsRow?.find?.("input");
-  } else {
-    automaticBuffsCheckbox = asElement(automaticBuffsRow)?.querySelector?.("input");
-  }
+  const automaticBuffsCheckbox = automaticBuffsRow?.querySelector?.("input");
 
   function toggleBuffSettingsVisibility(show, elements) {
     elements.forEach(element => {
-      if (!element) return;
-      if (isJQ) {
-        if (show) element.show();
-        else element.hide();
-      } else {
-        const el = asElement(element);
-        if (!el) return;
-        el.style.display = show ? "" : "none";
-      }
+      setElementVisible(element, show);
     });
   }
 
@@ -965,30 +1282,155 @@ function registerNasSettingsUi() {
     variantTargetCapRow
   ];
 
-  const isEnabled = automaticBuffsCheckbox
-    ? isJQ
-      ? automaticBuffsCheckbox.prop("checked")
-      : automaticBuffsCheckbox.checked
-    : false;
+  const isEnabled = checkboxChecked(automaticBuffsCheckbox);
   toggleBuffSettingsVisibility(isEnabled, dependentRows);
 
-  if (automaticBuffsCheckbox) {
-    if (isJQ) {
-      automaticBuffsCheckbox.off("change.nas").on("change.nas", function () {
-        toggleBuffSettingsVisibility($(this).prop("checked"), dependentRows);
-      });
-    } else if (!automaticBuffsCheckbox.dataset.nasListenerAttached) {
+  if (automaticBuffsCheckbox && !automaticBuffsCheckbox.dataset.nasListenerAttached) {
       automaticBuffsCheckbox.dataset.nasListenerAttached = "true";
       automaticBuffsCheckbox.addEventListener("change", function () {
         toggleBuffSettingsVisibility(this.checked, dependentRows);
       });
-    }
+  }
+
+  const enableDamageAutomationRow = getSettingRow("enableDamageAutomation");
+  const enableWoundsVigorAutomationRow = getSettingRow("enableWoundsVigorAutomation");
+  const woundsVigorActionTaxModeRow = getSettingRow("woundsVigorActionTaxMode");
+  const woundsVigorNoWoundsConstructUndeadRow = getSettingRow("woundsVigorNoWoundsConstructUndead");
+  const woundsVigorWoundDamageTypeMenuRow = getMenuRow("woundsVigorWoundDamageTypeMenu");
+  const massiveDamageRow = getSettingRow("massiveDamage");
+  const damageTypePriorityMenuRow = getMenuRow("damageTypePriorityMenu");
+
+  const enableDamageAutomationCheckbox = enableDamageAutomationRow?.querySelector?.("input");
+
+  const damageDependentRows = [
+    enableWoundsVigorAutomationRow,
+    woundsVigorActionTaxModeRow,
+    woundsVigorNoWoundsConstructUndeadRow,
+    woundsVigorWoundDamageTypeMenuRow,
+    massiveDamageRow,
+    damageTypePriorityMenuRow
+  ];
+
+  const damageEnabled = checkboxChecked(enableDamageAutomationCheckbox);
+  toggleBuffSettingsVisibility(damageEnabled, damageDependentRows);
+
+  if (enableDamageAutomationCheckbox && !enableDamageAutomationCheckbox.dataset.nasListenerAttached) {
+      enableDamageAutomationCheckbox.dataset.nasListenerAttached = "true";
+      enableDamageAutomationCheckbox.addEventListener("change", function () {
+        toggleBuffSettingsVisibility(this.checked, damageDependentRows);
+      });
+  }
+
+  const enableWoundsVigorAutomationCheckbox = enableWoundsVigorAutomationRow?.querySelector?.("input");
+
+  const woundsVigorEnabled = checkboxChecked(enableWoundsVigorAutomationCheckbox);
+  toggleBuffSettingsVisibility(woundsVigorEnabled, [woundsVigorActionTaxModeRow, woundsVigorNoWoundsConstructUndeadRow, woundsVigorWoundDamageTypeMenuRow]);
+
+  if (enableWoundsVigorAutomationCheckbox && !enableWoundsVigorAutomationCheckbox.dataset.nasWvListenerAttached) {
+      enableWoundsVigorAutomationCheckbox.dataset.nasWvListenerAttached = "true";
+      enableWoundsVigorAutomationCheckbox.addEventListener("change", function () {
+        toggleBuffSettingsVisibility(this.checked, [woundsVigorActionTaxModeRow, woundsVigorNoWoundsConstructUndeadRow, woundsVigorWoundDamageTypeMenuRow]);
+      });
+  }
+
+  const enableDyingAutomationRow = getSettingRow("enableDyingAutomation");
+  const dyingHandlingRow = getSettingRow("dyingHandling");
+  const enableDyingAutomationCheckbox = enableDyingAutomationRow?.querySelector?.("input");
+
+  const dyingEnabled = checkboxChecked(enableDyingAutomationCheckbox);
+  toggleBuffSettingsVisibility(dyingEnabled, [dyingHandlingRow]);
+
+  if (enableDyingAutomationCheckbox && !enableDyingAutomationCheckbox.dataset.nasDyingListenerAttached) {
+      enableDyingAutomationCheckbox.dataset.nasDyingListenerAttached = "true";
+      enableDyingAutomationCheckbox.addEventListener("change", function () {
+        toggleBuffSettingsVisibility(this.checked, [dyingHandlingRow]);
+      });
+  }
+
+  const automateSqueezingRow = getSettingRow("automateSqueezing");
+  const squeezingAutomationConfigRow = getMenuRow("squeezingAutomationConfig");
+  const automateSqueezingCheckbox = automateSqueezingRow?.querySelector?.("input");
+
+  const squeezingAutomationEnabled = checkboxChecked(automateSqueezingCheckbox);
+  toggleBuffSettingsVisibility(squeezingAutomationEnabled, [squeezingAutomationConfigRow]);
+
+  if (automateSqueezingCheckbox && !automateSqueezingCheckbox.dataset.nasSqueezeListenerAttached) {
+      automateSqueezingCheckbox.dataset.nasSqueezeListenerAttached = "true";
+      automateSqueezingCheckbox.addEventListener("change", function () {
+        toggleBuffSettingsVisibility(this.checked, [squeezingAutomationConfigRow]);
+      });
+  }
+
+  const automateConditionsRow = getSettingRow("automateConditions");
+  const handleConfusedRow = getSettingRow("handleConfused");
+  const restrictMovementRow = getSettingRow("restrictMovement");
+  const autoApplyFFRow = getSettingRow("autoApplyFF");
+  const skipSurprisedTokensRow = getSettingRow("skipSurprisedTokens");
+  const blindMovementCheckRow = getSettingRow("blindMovementCheck");
+  const disableAtZeroHPRow = getSettingRow("disableAtZeroHP");
+  const autoApplyEDRow = getSettingRow("autoApplyED");
+  const entangledGrappledHandlingRow = getSettingRow("entangledGrappledHandling");
+  const grappledHandlingRow = getSettingRow("grappledHandling");
+  const nauseatedHandlingRow = getSettingRow("nauseatedHandling");
+  const unconsciousAtNegativeHPRow = getSettingRow("unconsciousAtNegativeHP");
+  const applyDeadConditionRow = getSettingRow("applyDeadCondition");
+  const removeDeadConditionRow = getSettingRow("removeDeadCondition");
+
+  const automateConditionsCheckbox = automateConditionsRow?.querySelector?.("input");
+
+  const conditionDependentRows = [
+    handleConfusedRow,
+    restrictMovementRow,
+    autoApplyFFRow,
+    skipSurprisedTokensRow,
+    blindMovementCheckRow,
+    disableAtZeroHPRow,
+    autoApplyEDRow,
+    entangledGrappledHandlingRow,
+    grappledHandlingRow,
+    nauseatedHandlingRow,
+    automateSqueezingRow,
+    squeezingAutomationConfigRow,
+    unconsciousAtNegativeHPRow,
+    enableDyingAutomationRow,
+    dyingHandlingRow,
+    applyDeadConditionRow,
+    removeDeadConditionRow
+  ];
+
+  const conditionAutomationEnabled = checkboxChecked(automateConditionsCheckbox);
+  toggleBuffSettingsVisibility(conditionAutomationEnabled, conditionDependentRows);
+
+  if (automateConditionsCheckbox && !automateConditionsCheckbox.dataset.nasConditionsListenerAttached) {
+      automateConditionsCheckbox.dataset.nasConditionsListenerAttached = "true";
+      automateConditionsCheckbox.addEventListener("change", function () {
+        toggleBuffSettingsVisibility(this.checked, conditionDependentRows);
+      });
+  }
+
+  const enableMetamagicAutomationRow = getSettingRow("enableMetamagicAutomation");
+  const metamagicCastTimeRuleRow = getSettingRow("metamagicCastTimeRule");
+  const persistentSpellTargetModeRow = getSettingRow("persistentSpellTargetMode");
+  const metamagicChatCardNameModeRow = getSettingRow("metamagicChatCardNameMode");
+  const metamagicPreviewModeRow = getSettingRow("metamagicPreviewMode");
+
+  const enableMetamagicAutomationCheckbox = enableMetamagicAutomationRow?.querySelector?.("input");
+
+  const metamagicDependentRows = [
+    metamagicCastTimeRuleRow,
+    persistentSpellTargetModeRow,
+    metamagicChatCardNameModeRow,
+    metamagicPreviewModeRow
+  ];
+
+  const metamagicEnabled = checkboxChecked(enableMetamagicAutomationCheckbox);
+  toggleBuffSettingsVisibility(metamagicEnabled, metamagicDependentRows);
+
+  if (enableMetamagicAutomationCheckbox && !enableMetamagicAutomationCheckbox.dataset.nasListenerAttached) {
+      enableMetamagicAutomationCheckbox.dataset.nasListenerAttached = "true";
+      enableMetamagicAutomationCheckbox.addEventListener("change", function () {
+        toggleBuffSettingsVisibility(this.checked, metamagicDependentRows);
+      });
   }
   });
 }
-
-
-
-
-
-

@@ -1,5 +1,6 @@
 
 import { MODULE } from '../../../../common/module.js';
+import { chatMessageStyle } from '../../../../common/foundryCompat.js';
 
 function normalizeDamageTypeId(typeRef) {
   const needle = String(typeRef).trim().toLowerCase();
@@ -229,13 +230,13 @@ export function createConfusionEffectMessage({
   }
 
   const messageData = {
+    ...chatMessageStyle("OTHER"),
     user: game.user.id,
     speaker: {
       scene: canvas.scene.id,
       token: token.id,
       alias: speakerAlias
     },
-    type: CONST.CHAT_MESSAGE_STYLES.OTHER,
     content: tokenContent,
     whisper: whisper.length > 0 ? whisper : null
   };

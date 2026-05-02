@@ -672,3 +672,31 @@
     background: rgba(65, 105, 225, 0.1);
     border-left: 3px solid royalblue;
 } 
+
+/* NAS reactive (On Hit / On Struck) function row: label + arrow + select */
+.nas-onhit-effects .nas-rx-function-row,
+.nas-onstruck-effects .nas-rx-function-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.nas-onhit-effects .nas-rx-function-label,
+.nas-onstruck-effects .nas-rx-function-label {
+    flex: 0 0 auto;
+    margin: 0;
+    font-weight: 600;
+}
+.nas-onhit-effects .nas-rx-function-fields,
+.nas-onstruck-effects .nas-rx-function-fields {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.nas-onhit-effects .nas-rx-arrow,
+.nas-onstruck-effects .nas-rx-arrow {
+    opacity: 0.75;
+    user-select: none;
+}

@@ -4,7 +4,7 @@ export class VariantMappingManager extends FormApplication {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: 'variant-mapping-manager',
-      title: 'Manage Variant Mappings',
+      title: game.i18n.localize("NAS.forms.variantMappingManager.title"),
       template: `modules/${MODULE.ID}/src/templates/variant-mapping-manager.html`,
       width: 600,
       height: 'auto',
@@ -19,7 +19,9 @@ export class VariantMappingManager extends FormApplication {
       const displayName = await this._resolveSpellName(key);
       const allyLabel = await this._resolveBuffLabel(entry?.allies);
       const foeLabel = await this._resolveBuffLabel(entry?.foes);
-      const switching = entry?.allowSwitching ? 'Yes' : 'No';
+      const switching = entry?.allowSwitching
+      ? game.i18n.localize("NAS.common.buttons.yes")
+      : game.i18n.localize("NAS.common.buttons.no");
       const perTarget = entry?.perTarget?.length ? `${entry.perTarget.length}` : '-';
       rows.push({ key, name: displayName, allies: allyLabel, foes: foeLabel, switching, perTarget });
     }
@@ -72,10 +74,7 @@ export class VariantMappingManager extends FormApplication {
     }
     if (changed) {
       await game.settings.set(MODULE.ID, 'pairedBuffMappings', mappings);
-      ui.notifications.info(`${MODULE.NAME} | Removed selected mappings.`);
+      ui.notifications.info(game.i18n.localize("NAS.forms.variantMappingManager.savedInfo"));
     }
   }
 }
-
-
-

@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "persistentSpell",
   name: "Persistent Spell",
-  prefix: "Persistent",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.persistentSpell") ?? "Persistent"; },
 };
 
 const PERSISTENT_FOOTNOTE =

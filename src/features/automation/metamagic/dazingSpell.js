@@ -4,7 +4,9 @@ import { getAlignmentValue, getCreatureTypeValues } from "../utils/creatureTypeU
 export const METAMAGIC_DEFINITION = {
   key: "dazingSpell",
   name: "Dazing Spell",
-  prefix: "Dazing",
+  get prefix() {
+    return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.dazingSpell") ?? "Dazing";
+  },
 };
 
 export const DAZING_FEAT_ROUNDS = 1;

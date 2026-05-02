@@ -17,6 +17,10 @@ export class TranslationForm extends FormApplication {
         translations.hardness ||= "Hardness";
         translations.construct ||= "Construct Traits";
         translations.undead ||= "Undead Traits";
+        translations.constructClassNames ||= "";
+        translations.undeadClassNames ||= "";
+        translations.constructRaceNames ||= "";
+        translations.undeadRaceNames ||= "";
 
         return translations;
     }
@@ -25,7 +29,11 @@ export class TranslationForm extends FormApplication {
         const translations = {
             hardness: formData.hardness.trim() || "Hardness",
             construct: formData.construct.trim() || "Construct Traits",
-            undead: formData.undead.trim() || "Undead Traits"
+            undead: formData.undead.trim() || "Undead Traits",
+            constructClassNames: String(formData.constructClassNames ?? "").trim(),
+            undeadClassNames: String(formData.undeadClassNames ?? "").trim(),
+            constructRaceNames: String(formData.constructRaceNames ?? "").trim(),
+            undeadRaceNames: String(formData.undeadRaceNames ?? "").trim()
         };
 
         await game.settings.set(MODULE.ID, "translations", translations);

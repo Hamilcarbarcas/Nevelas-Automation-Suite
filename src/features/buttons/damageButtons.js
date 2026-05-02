@@ -1,7 +1,8 @@
 import { MODULE } from '../../common/module.js';
+import { elementFromHtmlLike } from '../../common/foundryCompat.js';
 
 export function onRenderChatMessage(html) {
-    const root = (typeof jQuery !== 'undefined' && html instanceof jQuery) ? html[0] : html;
+    const root = elementFromHtmlLike(html);
     const messages = root?.querySelectorAll('div.chat-attack');
     if (!messages?.length) return;
     messages.forEach(message => {

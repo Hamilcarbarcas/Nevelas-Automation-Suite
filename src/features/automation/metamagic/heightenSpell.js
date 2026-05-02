@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "heightenSpell",
   name: "Heighten Spell",
-  prefix: "Heighten",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.heightenSpell") ?? "Heighten"; },
 };
 
 export function applyHeightenSpell(context, options = {}) {

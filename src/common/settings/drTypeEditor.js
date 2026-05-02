@@ -1,3 +1,5 @@
+import { jqueryFromHtmlLike } from '../foundryCompat.js';
+
 export class DRTypeEditor extends FormApplication {
     constructor(drTypes, onSubmit) {
         super();
@@ -29,6 +31,7 @@ export class DRTypeEditor extends FormApplication {
 
     activateListeners(html) {
         super.activateListeners(html);
+        html = jqueryFromHtmlLike(html) ?? html;
         html.find('.add-entry').click(this._onAddType.bind(this));
         html.find('.delete-entry').click(this._onRemoveType.bind(this));
         html.find('#new-type-select').change(this._onNewTypeSelect.bind(this));

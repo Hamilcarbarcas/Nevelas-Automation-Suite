@@ -244,6 +244,143 @@ function mergeLegacyFlags(doc, legacyIds, newId) {
   return merged;
 }
 
+function normalizeDamageTypeReference(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function normalizeDamageTypeReplacements(replacements) {
+  if (!replacements) return new Map();
+  if (replacements instanceof Map) {
+    return new Map(
+      Array.from(replacements.entries())
+        .map(([from, to]) => [normalizeDamageTypeReference(from), normalizeDamageTypeReference(to)])
+        .filter(([from, to]) => from && to && from !== to)
+    );
+  }
+  if (Array.isArray(replacements)) {
+    return normalizeDamageTypeReplacements(new Map(replacements));
+  }
+  if (typeof replacements === "object") {
+    return normalizeDamageTypeReplacements(new Map(Object.entries(replacements)));
+  }
+  return new Map();
+}
+
+function replaceDamageTypeReferencesInActions(actions, replacementMap) {
+  if (!Array.isArray(actions) || replacementMap.size === 0) return null;
+
+  let changed = false;
+  const nextActions = duplicateFn(actions);
+  for (const action of nextActions) {
+    const damage = action?.damage;
+    if (!damage || typeof damage !== "object") continue;
+
+    for (const partsKey of ["parts", "critParts", "nonCritParts"]) {
+      const parts = damage[partsKey];
+      if (!Array.isArray(parts)) continue;
+
+      for (const part of parts) {
+        const types = Array.isArray(part?.types) ? part.types : Array.isArray(part?.[1]) ? part[1] : null;
+        if (!Array.isArray(types)) continue;
+
+        for (let i = 0; i < types.length; i += 1) {
+          const normalized = normalizeDamageTypeReference(types[i]);
+          const replacement = replacementMap.get(normalized);
+          if (!replacement) continue;
+          types[i] = replacement;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return changed ? nextActions : null;
+}
+
+function buildItemDamageTypeUpdate(item, replacementMap, stats) {
+  const nextActions = replaceDamageTypeReferencesInActions(item?.system?.actions, replacementMap);
+  if (!nextActions) return null;
+  if (stats) stats.matches += 1;
+  return { _id: item.id, "system.actions": nextActions };
+}
+
+async function updateWorldItemDamageTypeReferences(replacementMap, progress, stats) {
+  for (const item of game.items ?? []) {
+    if (stats) stats.worldScanned += 1;
+    const update = buildItemDamageTypeUpdate(item, replacementMap, stats);
+    if (update) {
+      await item.update({ "system.actions": update["system.actions"] });
+      if (stats) stats.worldUpdated += 1;
+    }
+    if (progress) await progress.increment(`World Item: ${item.name ?? item.id}`);
+  }
+}
+
+async function updateActorItemDamageTypeReferences(replacementMap, progress, stats) {
+  for (const actor of game.actors ?? []) {
+    const itemUpdates = [];
+    for (const item of actor.items ?? []) {
+      if (stats) stats.actorScanned += 1;
+      const update = buildItemDamageTypeUpdate(item, replacementMap, stats);
+      if (update) itemUpdates.push(update);
+      if (progress) {
+        await progress.increment(`Actor Item: ${item.name ?? item.id} (Actor: ${actor.name ?? actor.id})`);
+      }
+    }
+    if (itemUpdates.length > 0) {
+      await actor.updateEmbeddedDocuments("Item", itemUpdates);
+      if (stats) stats.actorUpdated += itemUpdates.length;
+    }
+  }
+}
+
+async function updateTokenActorItemDamageTypeReferences(replacementMap, progress, stats) {
+  for (const scene of game.scenes ?? []) {
+    for (const token of scene.tokens ?? []) {
+      const actor = token.actor;
+      if (!actor) continue;
+      const itemUpdates = [];
+      for (const item of actor.items ?? []) {
+        if (stats) stats.tokenScanned += 1;
+        const update = buildItemDamageTypeUpdate(item, replacementMap, stats);
+        if (update) itemUpdates.push(update);
+        if (progress) {
+          await progress.increment(`Token Item: ${item.name ?? item.id} (Token: ${token.name ?? token.id})`);
+        }
+      }
+      if (itemUpdates.length > 0) {
+        try {
+          await actor.updateEmbeddedDocuments("Item", itemUpdates);
+          if (stats) stats.tokenUpdated += itemUpdates.length;
+        } catch (err) {
+          if (stats) stats.tokenErrors.push(err?.message ? String(err.message) : String(err));
+          throw err;
+        }
+      }
+    }
+  }
+}
+
+export async function updateDamageTypeReferences(replacements, { progress = null } = {}) {
+  const replacementMap = normalizeDamageTypeReplacements(replacements);
+  if (replacementMap.size === 0) return;
+
+  const stats = {
+    replacements: Array.from(replacementMap.entries()),
+    worldScanned: 0,
+    worldUpdated: 0,
+    actorScanned: 0,
+    actorUpdated: 0,
+    tokenScanned: 0,
+    tokenUpdated: 0,
+    matches: 0,
+    tokenErrors: []
+  };
+  await updateWorldItemDamageTypeReferences(replacementMap, progress, stats);
+  await updateActorItemDamageTypeReferences(replacementMap, progress, stats);
+  await updateTokenActorItemDamageTypeReferences(replacementMap, progress, stats);
+}
+
 async function migrateCollectionFlags(collection, legacyIds, newId, progress, labeler) {
   const ids = Array.isArray(legacyIds) ? legacyIds : [legacyIds];
   if (!collection) return;

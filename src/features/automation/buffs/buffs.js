@@ -1,12 +1,16 @@
 
 import { MODULE } from '../../../common/module.js';
 import { socket } from '../../../integration/moduleSockets.js';
+import { tokenCanSeeToken } from '../utils/tokenVisibility.js';
 
 export async function handleBuffAutomation(action) {
   
   if (action.item.type === "feat" && action.item.subType === "classFeat") {
     const isBuff = action.item.hasItemBooleanFlag('buff');
     if (!isBuff) return;
+  } else if (action.item.type === "spell" || action.item.type === "consumable") {
+    const isNoBuff = action.item.hasItemBooleanFlag('nobuff');
+    if (isNoBuff) return;
   }
 
   let searchName = action.item.name;
@@ -24,6 +28,22 @@ export async function handleBuffAutomation(action) {
       }
     }
   }
+
+  const stripModifierLiteral = (name, rawModifier) => {
+    const mod = (rawModifier ?? "").trim();
+    if (!mod) return { value: name, matched: false };
+    const n = (name ?? "").trim();
+    const nLower = n.toLowerCase();
+    const mLower = mod.toLowerCase();
+
+    if (nLower.startsWith(mLower)) {
+      return { value: n.slice(mod.length).trim(), matched: true };
+    }
+    if (nLower.endsWith(mLower)) {
+      return { value: n.slice(0, Math.max(0, n.length - mod.length)).trim(), matched: true };
+    }
+    return { value: name, matched: false };
+  };
   
   const modifierNames = game.settings.get(MODULE.ID, 'modifierNames') || {};
   const communalString = modifierNames.communal || 'Communal';
@@ -38,6 +58,12 @@ export async function handleBuffAutomation(action) {
     isCommunal = true;
     searchName = searchName.replace(communalEndRegex, '').trim();
     searchName = searchName.replace(/[\s,]+$/, '').trim();
+  }
+
+  const massString = modifierNames.mass || "Mass";
+  const strippedMass = stripModifierLiteral(searchName, massString);
+  if (strippedMass.matched) {
+    searchName = strippedMass.value;
   }
   
   const hasTargets = action.shared.targets && action.shared.targets.length > 0;
@@ -56,15 +82,19 @@ export async function handleBuffAutomation(action) {
   const rawDurationValue = durationContext?.value ?? action.action?.duration?.value ?? '';
 
   let durationValue;
+  let durationValueSource = "roll";
   if (durationContext?.evaluated?.total != null) {
     durationValue = durationContext.evaluated.total;
+    durationValueSource = "context.evaluated.total";
   } else {
     try {
       durationValue = (await new Roll(rawDurationValue, action.shared.rollData).evaluate()).total;
+      durationValueSource = "roll.evaluate";
     } catch (err) {
       console.warn(`${MODULE.ID} | Failed to evaluate duration formula "${rawDurationValue}". Using numeric fallback if possible.`, err);
       const numericFallback = Number(rawDurationValue);
       durationValue = Number.isNaN(numericFallback) ? 0 : numericFallback;
+      durationValueSource = "numericFallback";
     }
   }
 
@@ -133,7 +163,13 @@ export async function handleBuffAutomation(action) {
         communalPromptForManual,
         isAreaOfEffect
       });
-      if (targetContext.rejected) return;
+      if (targetContext.rejected) {
+        notifyBuffTargetingRejection(action, targetContext.reason);
+        return;
+      }
+
+      applyMaskFocusPerTargetDurationAdjustments(action, targetContext, durationUnits);
+      applyNaniteBloodlineArcanaPerTargetDurationAdjustments(action, targetContext, durationUnits);
 
       const variantPlan = await promptBuffSelection(categorizedMatches.variants, action, {
         mode: 'variant',
@@ -192,7 +228,13 @@ export async function handleBuffAutomation(action) {
         communalPromptForManual,
         isAreaOfEffect
       });
-      if (targetContext.rejected) return;
+      if (targetContext.rejected) {
+        notifyBuffTargetingRejection(action, targetContext.reason);
+        return;
+      }
+
+      applyMaskFocusPerTargetDurationAdjustments(action, targetContext, durationUnits);
+      applyNaniteBloodlineArcanaPerTargetDurationAdjustments(action, targetContext, durationUnits);
 
       const { filteredTargets, perTargetDurations } = targetContext;
 
@@ -371,6 +413,83 @@ export async function findMatchingBuffs(name) {
   return [];
 }
 
+function applyMaskFocusPerTargetDurationAdjustments(action, targetContext, durationUnits) {
+  const ctx = action.shared?.nasSpellContext;
+  const mf = ctx?.duration?.maskFocusSelf;
+  const active = ctx?.featEffects?.maskFocus?.active === true;
+  if (!active || !mf || !action.token) return;
+
+  const casterId = action.token.id;
+  const unit = (mf.units ?? durationUnits ?? "").toString();
+  const baseDur = { units: unit, value: String(mf.baseTotal) };
+  const selfDur = { units: unit, value: String(mf.extendedSelfTotal) };
+
+  const { filteredTargets, perTargetDurations } = targetContext;
+
+  if (Array.isArray(perTargetDurations) && perTargetDurations.length > 0) {
+    for (const entry of perTargetDurations) {
+      if (entry?.target?.id === casterId && entry.duration) {
+        entry.duration = {
+          ...entry.duration,
+          units: selfDur.units,
+          value: selfDur.value
+        };
+      }
+    }
+    return;
+  }
+
+  if (!Array.isArray(filteredTargets) || filteredTargets.length === 0) return;
+
+  if (filteredTargets.length === 1) {
+    const only = filteredTargets[0];
+    if (only.id === casterId) {
+      targetContext.perTargetDurations = [{ target: only, duration: selfDur }];
+    }
+    return;
+  }
+
+  targetContext.perTargetDurations = filteredTargets.map((t) => ({
+    target: t,
+    duration: t.id === casterId ? selfDur : baseDur
+  }));
+}
+
+function applyNaniteBloodlineArcanaPerTargetDurationAdjustments(action, targetContext, durationUnits) {
+  const ctx = action.shared?.nasSpellContext;
+  const nanite = ctx?.duration?.naniteBloodlineArcana;
+  if (!nanite || !action.token) return;
+
+  const casterId = action.token.id;
+  const unit = (nanite.units ?? durationUnits ?? "").toString();
+  const baseDur = { units: unit, value: String(nanite.baseTotal) };
+  const doubledDur = { units: unit, value: String(nanite.extendedTotal) };
+  const { filteredTargets, perTargetDurations } = targetContext;
+
+  if (Array.isArray(perTargetDurations) && perTargetDurations.length > 0) {
+    const onlyCaster =
+      perTargetDurations.length === 1 &&
+      perTargetDurations[0]?.target?.id === casterId;
+    for (const entry of perTargetDurations) {
+      if (!entry?.duration) continue;
+      entry.duration = {
+        ...entry.duration,
+        units: onlyCaster ? doubledDur.units : baseDur.units,
+        value: onlyCaster ? doubledDur.value : baseDur.value
+      };
+    }
+    return;
+  }
+
+  if (!Array.isArray(filteredTargets) || filteredTargets.length === 0) return;
+
+  const onlyCaster = filteredTargets.length === 1 && filteredTargets[0]?.id === casterId;
+  targetContext.perTargetDurations = filteredTargets.map((target) => ({
+    target,
+    duration: onlyCaster ? doubledDur : baseDur
+  }));
+}
+
 async function gatherTargetsForApplication({
   action,
   isSelfTargeting,
@@ -387,6 +506,7 @@ async function gatherTargetsForApplication({
   const filteringMode = game.settings.get(MODULE.ID, 'buffTargetFiltering');
   const personalTargeting = game.settings.get(MODULE.ID, 'personalTargeting');
   let perTargetDurations = null;
+  let rejectionReason = null;
 
   if (filteringMode === "byDisposition") {
     if (isSelfTargeting) {
@@ -403,11 +523,15 @@ async function gatherTargetsForApplication({
         }
       }
     } else {
+      const hadInitialTargets = Array.isArray(filteredTargets) && filteredTargets.length > 0;
       filteredTargets = filteredTargets.filter(target => {
         const targetDisposition = target.document ? target.document.disposition : target.disposition;
         const actionDisposition = action.token.disposition;
         return targetDisposition === actionDisposition;
       });
+      if (hadInitialTargets && (!filteredTargets || filteredTargets.length === 0)) {
+        rejectionReason = "dispositionFilteredAllTargets";
+      }
       if (isCommunal) {
         perTargetDurations = await handleCommunalDuration({
           isCommunal,
@@ -419,7 +543,7 @@ async function gatherTargetsForApplication({
           communalDurationUnit,
           action
         });
-        if (!perTargetDurations) return { rejected: true };
+        if (!perTargetDurations) return { rejected: true, reason: "communalDurationCancelled" };
       }
     }
   } else if (filteringMode === "manualSelection") {
@@ -461,9 +585,12 @@ async function gatherTargetsForApplication({
             communalDurationUnit,
             action
           });
-          if (!perTargetDurations) return { rejected: true };
+          if (!perTargetDurations) return { rejected: true, reason: "communalDurationCancelled" };
         } else {
           filteredTargets = await promptTargetSelection(filteredTargets, action);
+          if ((!filteredTargets || filteredTargets.length === 0) && game.settings.get(MODULE.ID, 'buffAutomationMode') === "strict") {
+            return { rejected: true, reason: "manualSelectionCancelled" };
+          }
         }
       }
     }
@@ -488,14 +615,14 @@ async function gatherTargetsForApplication({
           communalDurationUnit,
           action
         });
-        if (!perTargetDurations) return { rejected: true };
+        if (!perTargetDurations) return { rejected: true, reason: "communalDurationCancelled" };
       }
     }
   }
 
   if ((!filteredTargets || filteredTargets.length === 0) && game.settings.get(MODULE.ID, 'buffAutomationMode') === "strict") {
     action.shared.reject = true;
-    return { rejected: true };
+    return { rejected: true, reason: rejectionReason || "noTargetsStrict" };
   }
 
   const slotInfo = checkAndConsumeSpellSlots({
@@ -504,9 +631,24 @@ async function gatherTargetsForApplication({
     isCommunal,
     isAreaOfEffect
   });
-  if (slotInfo && slotInfo.rejected) return { rejected: true };
+  if (slotInfo && slotInfo.rejected) return { rejected: true, reason: "spellSlots" };
 
   return { filteredTargets, perTargetDurations, slotInfo, rejected: false };
+}
+
+function notifyBuffTargetingRejection(action, reason) {
+  if (!action) return;
+  if (reason === "spellSlots") return; // Already handled with a dedicated warning in checkAndConsumeSpellSlots.
+
+  const map = {
+    noTargetsStrict: "NAS.buffs.TargetingRejectedNoTargetsStrict",
+    dispositionFilteredAllTargets: "NAS.buffs.TargetingRejectedDisposition",
+    manualSelectionCancelled: "NAS.buffs.TargetingRejectedManualSelection",
+    communalDurationCancelled: "NAS.buffs.TargetingRejectedCommunalSelection",
+  };
+
+  const messageKey = map[reason] || "NAS.buffs.TargetingRejectedUnknown";
+  ui.notifications.warn(game.i18n.format(messageKey, { name: action.item?.name ?? "" }));
 }
 
 export async function promptBuffSelection(buffs, action, options = {}) {
@@ -575,13 +717,13 @@ export async function promptBuffSelection(buffs, action, options = {}) {
               ${game.i18n.localize('NAS.buffs.ApplyOnTurnShort') || 'On turn'}
             </label>
           </div>
-          <small style="color: ${isSameDisposition ? 'green' : 'red'};">${isSameDisposition ? 'Ally' : 'Foe'}</small>
+          <small style="color: ${isSameDisposition ? 'green' : 'red'};">${isSameDisposition ? game.i18n.localize('NAS.common.labels.ally') : game.i18n.localize('NAS.common.labels.foe')}</small>
         </div>
       `;
     }).join('');
 
     const initialSwitching = !!remembered?.allowSwitching;
-    let content = `<p>${game.i18n.localize('NAS.buffs.SelectBuffVariant')}: ${action.item?.name || 'Spell'}</p>`;
+    let content = `<p>${game.i18n.localize('NAS.buffs.SelectBuffVariant')}: ${action.item?.name || game.i18n.localize('NAS.buffs.SpellFallback')}</p>`;
     content += `
       <div class="form-group" style="display:grid; grid-template-columns: auto 1fr; align-items:center; gap:8px;">
         <label style="display:flex; gap:6px; align-items:center;">
@@ -589,7 +731,7 @@ export async function promptBuffSelection(buffs, action, options = {}) {
           ${game.i18n.localize('NAS.buffs.Allies') || 'Allies'}
         </label>
         <select id="ic-ally-variant" style="width: 100%; display:${initialSwitching ? 'none' : (rememberedAlliesToggle ? 'block' : 'none')};">
-          <option value="none">None</option>
+          <option value="none">${game.i18n.localize('NAS.common.labels.none')}</option>
           ${renderOptions(allyDefaultIdx)}
         </select>
       </div>
@@ -599,13 +741,13 @@ export async function promptBuffSelection(buffs, action, options = {}) {
           ${game.i18n.localize('NAS.buffs.Foes') || 'Foes'}
         </label>
         <select id="ic-foe-variant" style="width: 100%; display:${initialSwitching ? 'none' : (rememberedFoesToggle ? 'block' : 'none')};">
-          <option value="none">None</option>
+          <option value="none">${game.i18n.localize('NAS.common.labels.none')}</option>
           ${renderOptions(foeDefaultIdx)}
         </select>
       </div>
       <div class="form-group" style="display:flex; gap:8px; align-items:center; margin-top:6px;">
         <input type="checkbox" id="ic-allow-switching" ${initialSwitching ? 'checked' : ''}/>
-        <label for="ic-allow-switching">${game.i18n.localize('NAS.buffs.AllowSwitchingEachRound') || 'Allow switching each round'}</label>
+        <label for="ic-allow-switching">${game.i18n.localize('NAS.buffs.AllowSwitchingEachRound')}</label>
       </div>
       ${targetCap ? `<div id="ic-cap-hint" style="margin: 6px 0; color: var(--color-text);">${game.i18n.format('NAS.buffs.TargetCapHintRemaining', { cap: targetCap, remaining: targetCap })}</div>` : ''}
       <div id="ic-target-section" style="display:${initialSwitching ? 'grid' : 'none'}; grid-template-columns: repeat(auto-fit, minmax(160px, 170px)); gap: 12px; justify-content: flex-start; border:1px solid #ccc; padding:8px; border-radius:6px; max-height: 340px; overflow-y:auto;">
@@ -614,7 +756,7 @@ export async function promptBuffSelection(buffs, action, options = {}) {
       <div class="form-group" style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
         <label style="display: inline-flex; align-items: center; gap: 6px; margin: 0;">
           <input type="checkbox" id="ic-remember-mapping" style="margin: 0;"/>
-          ${game.i18n.localize('NAS.buffs.RememberForSpell') || 'Remember for this spell'}
+          ${game.i18n.localize('NAS.buffs.RememberForSpell')}
         </label>
       </div>
     `;
@@ -776,7 +918,7 @@ export async function promptBuffSelection(buffs, action, options = {}) {
       buttons: {
         select: {
           icon: '<i class="fas fa-check"></i>',
-          label: game.i18n.localize('NAS.buffs.Select'),
+          label: game.i18n.localize('NAS.common.buttons.select'),
           callback: html => {
             let selectedIndex;
             if (typeof html.find === 'function') {
@@ -814,13 +956,7 @@ export async function promptTargetSelection(targets, action, communalOptions = n
       if (disposition === CONST.TOKEN_DISPOSITIONS.SECRET) return false;
       if (isHidden) return false;
       if (isInvisible && !casterHasSeeInvisibility) return false;
-      if (casterToken && canvas?.visibility?.testVisibility) {
-        const isVisible = canvas.visibility.testVisibility(token.center, {
-          object: token,
-          visionSource: casterToken.vision,
-        });
-        if (!isVisible) return false;
-      }
+      if (casterToken && !tokenCanSeeToken(casterToken, token)) return false;
       return true;
     });
   }
@@ -855,7 +991,7 @@ export async function promptTargetSelection(targets, action, communalOptions = n
 
     return new Promise(resolve => {
       let applied = false;
-      let content = `<p>Total available duration: <b>${total} ${unit || ''}</b></p>`;
+      let content = `<p>${game.i18n.format('NAS.buffs.TotalAvailableDuration', { total, unit: unit || '' })}</p>`;
       content += `<div class="target-selection-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-top: 10px;">`;
       content += `<div style="display: flex; flex-wrap: wrap; gap: 10px;">`;
       filteredTargets.forEach((target, index) => {
@@ -876,7 +1012,7 @@ export async function promptTargetSelection(targets, action, communalOptions = n
         `;
       });
       content += `</div></div>`;
-      content += `<div style="margin-top: 10px;">Unassigned duration: <b><span id="unassigned">${total - assigned.reduce((a, b) => a + b, 0)}</span> ${unit || ''}</b></div>`;
+      content += `<div style="margin-top: 10px;">${game.i18n.format('NAS.buffs.UnassignedDuration', { remaining: total - assigned.reduce((a, b) => a + b, 0), unit: unit || '' })}</div>`;
 
       const dialog = new Dialog({
         title: game.i18n.localize('NAS.buffs.SelectBuffTargets'),
@@ -1124,14 +1260,16 @@ async function handleVariantPlanApplication({ action, variants, plan, targetCont
         }
       }
     } else {
-      const key = `${variant.id}|${variant.pack || 'world'}`;
-      if (!immediateBuckets.has(key)) immediateBuckets.set(key, { variant, targets: [] });
+      const key = `${variant.id}|${variant.pack || "world"}|${duration.value}|${duration.units}`;
+      if (!immediateBuckets.has(key)) {
+        immediateBuckets.set(key, { variant, targets: [], duration });
+      }
       immediateBuckets.get(key).targets.push(target);
     }
   }
 
   for (const bucket of immediateBuckets.values()) {
-    await applyBuffToTargets(bucket.variant, bucket.targets, defaultDuration, casterLevel);
+    await applyBuffToTargets(bucket.variant, bucket.targets, bucket.duration ?? defaultDuration, casterLevel);
   }
 
   if (plan.allowSwitching && scheduled.length > 0 && combat) {
@@ -1220,6 +1358,83 @@ export async function activateVariantForTarget(target, variant, variants, durati
   }
 }
 
+function normalizeDurationForBuff(duration = {}) {
+  const sourceUnits = (duration?.sourceUnits ?? duration?.units ?? "").toString().trim();
+  const rawValue = duration?.value;
+  const value =
+    rawValue === undefined || rawValue === null || rawValue === "undefined" || rawValue === "null"
+      ? ""
+      : rawValue;
+
+  if (sourceUnits === "inst" || sourceUnits === "perm") {
+    return {
+      units: "",
+      value: "",
+      subType: "perm"
+    };
+  }
+
+  if (sourceUnits === "seeText") {
+    return {
+      units: "",
+      value: "",
+      subType: null
+    };
+  }
+
+  return {
+    units: sourceUnits,
+    value,
+    subType: null
+  };
+}
+
+function normalizeDurationToEffectSeconds(normalizedDuration = {}) {
+  const units = (normalizedDuration?.units ?? "").toString().trim().toLowerCase();
+  const numericValue = Number(normalizedDuration?.value ?? 0);
+  if (!Number.isFinite(numericValue) || numericValue < 0) return 0;
+
+  const roundSeconds = Number(CONFIG?.time?.roundTime ?? 6);
+  switch (units) {
+    case "second":
+    case "seconds":
+    case "sec":
+      return numericValue;
+    case "round":
+    case "rounds":
+    case "turn":
+    case "turns":
+      return numericValue * roundSeconds;
+    case "minute":
+    case "minutes":
+      return numericValue * 60;
+    case "hour":
+    case "hours":
+      return numericValue * 3600;
+    case "day":
+    case "days":
+      return numericValue * 86400;
+    case "week":
+    case "weeks":
+      return numericValue * 604800;
+    case "":
+      return 0;
+    default:
+      return 0;
+  }
+}
+
+async function syncBuffEffectDuration(buffItem, normalizedDuration) {
+  const effect = buffItem?.effect;
+  if (!effect) return;
+  const seconds = normalizeDurationToEffectSeconds(normalizedDuration);
+  const startTime = Number(game?.time?.worldTime ?? effect?.duration?.startTime ?? 0);
+  await effect.update({
+    "duration.startTime": Number.isFinite(startTime) ? startTime : 0,
+    "duration.seconds": Number.isFinite(seconds) ? seconds : 0
+  });
+}
+
 /**
  * Apply a buff to appropriate targets
  * @param {Object} buff - The buff item to apply
@@ -1246,6 +1461,15 @@ export async function applyBuffToTargets(buff, targets, duration, casterLevel, o
   if (!buff || !targets || targets.length === 0) {
     console.warn(`${MODULE.ID} | Cannot apply buff: Invalid buff or no targets`);
     return;
+  }
+
+  const normalizedDuration = normalizeDurationForBuff(duration);
+  const durationUpdate = {
+    "system.duration.units": normalizedDuration.units,
+    "system.duration.value": String(normalizedDuration.value ?? "")
+  };
+  if (normalizedDuration.subType) {
+    durationUpdate["system.subType"] = normalizedDuration.subType;
   }
   
   for (const target of targets) {
@@ -1286,8 +1510,7 @@ export async function applyBuffToTargets(buff, targets, duration, casterLevel, o
         const isActive = existingBuff.isActive;
         if (isActive && !activate) {
           await existingBuff.update({
-            "system.duration.units": duration.units,
-            "system.duration.value": String(duration.value),
+            ...durationUpdate,
             "system.active": false,
             ...(casterLevel !== undefined ? { "system.level": casterLevel } : {})
           });
@@ -1295,11 +1518,11 @@ export async function applyBuffToTargets(buff, targets, duration, casterLevel, o
         }
 
         await existingBuff.update({
-          "system.duration.units": duration.units,
-          "system.duration.value": String(duration.value),
+          ...durationUpdate,
           "system.active": activate,
           ...(casterLevel !== undefined ? { "system.level": casterLevel } : {})
         });
+        await syncBuffEffectDuration(existingBuff, normalizedDuration);
         
         if (!silent) ui.notifications.info(game.i18n.format('NAS.buffs.UpdatedExisting', { name: buff.name, actor: actor.name }));
       } else {
@@ -1317,11 +1540,15 @@ export async function applyBuffToTargets(buff, targets, duration, casterLevel, o
           buffData.flags[MODULE.ID].sourceId = buff.document.uuid;
         }
         
-        if (duration && duration.units) {
+        if (duration) {
           buffData.system = buffData.system || {};
           buffData.system.duration = buffData.system.duration || {};
-          buffData.system.duration.units = duration.units;
-          buffData.system.duration.value = String(duration.value); 
+          buffData.system.duration.units = normalizedDuration.units;
+          buffData.system.duration.value = String(normalizedDuration.value ?? "");
+        }
+        if (normalizedDuration.subType) {
+          buffData.system = buffData.system || {};
+          buffData.system.subType = normalizedDuration.subType;
         }
         
         if (casterLevel !== undefined) {
@@ -1337,6 +1564,7 @@ export async function applyBuffToTargets(buff, targets, duration, casterLevel, o
         if (newItems && newItems.length > 0 && activate) {
           const newBuff = newItems[0];
           await newBuff.update({"system.active": true});
+          await syncBuffEffectDuration(newBuff, normalizedDuration);
         }
         
         if (!silent) ui.notifications.info(game.i18n.format('NAS.buffs.Applied', { name: buff.name, actor: actor.name }));
@@ -1376,7 +1604,12 @@ function checkAndConsumeSpellSlots({ action, filteredTargets, isCommunal, isArea
     const actor = action.token?.actor;
 
     const spellbookData = actor?.system?.attributes?.spells?.spellbooks?.[spellbook];
-    const slotIncrease = Number(action.shared?.nasSpellContext?.metamagic?.slotIncrease ?? 0);
+    const slotIncrease = Number(
+      action.shared?.nasSpellContext?.metamagic?.consumedSlotIncrease
+      ?? action.shared?.nasSpellContext?.metamagic?.effectiveSlotIncrease
+      ?? action.shared?.nasSpellContext?.metamagic?.slotIncrease
+      ?? 0
+    );
     const isSpontaneous = Boolean(spellbookData?.spontaneous);
     const targetSpellLevel = isSpontaneous ? baseSpellLevel + slotIncrease : baseSpellLevel;
     const spellLevelKey = `spell${targetSpellLevel}`;

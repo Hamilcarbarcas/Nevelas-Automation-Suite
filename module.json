@@ -2,10 +2,10 @@
   "id": "nevelas-automation-suite",
   "title": "Nevela's Automation Suite",
   "description": "Combined bundle of PF1 Automate Damage and PF1 Improved Conditions.",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "compatibility": {
     "minimum": "12",
-    "verified": "13.344"
+    "verified": "13.351"
   },
   "relationships": {
     "systems": [
@@ -63,18 +63,25 @@
       "path": "packs/conditions",
       "type": "JournalEntry",
       "system": "pf1"
+    },
+    {
+      "name": "Buffs",
+      "label": "Buffs",
+      "path": "packs/buffs",
+      "type": "Item",
+      "system": "pf1"
     }
   ],
 
   "packFolders": [
     {
       "name": "Automation Suite",
-      "packs": ["Conditions"],
+      "packs": ["Conditions", "Buffs"],
       "color": "#1F6AE1",
       "folders": []
     }
   ],
   "socket": true,
   "manifest": "https://github.com/Nevela-0/Nevelas-Automation-Suite/releases/latest/download/module.json",
-  "download": "https://github.com/Nevela-0/Nevelas-Automation-Suite/releases/latest/download/nevelas-automation-suite.zip"
+  "download": "https://github.com/Nevela-0/Nevelas-Automation-Suite/releases/download/2.0.0/nevelas-automation-suite.zip"
 }

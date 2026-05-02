@@ -1,5 +1,6 @@
 import { METAMAGIC_DEFINITION as DazingSpell } from "./dazingSpell.js";
 import { METAMAGIC_DEFINITION as EmpowerSpell } from "./empowerSpell.js";
+import { METAMAGIC_DEFINITION as EnlargeSpell } from "./enlargeSpell.js";
 import { METAMAGIC_DEFINITION as ExtendSpell } from "./extendSpell.js";
 import { METAMAGIC_DEFINITION as HeightenSpell } from "./heightenSpell.js";
 import { METAMAGIC_DEFINITION as IntensifiedSpell } from "./intensifiedSpell.js";
@@ -14,6 +15,7 @@ import { METAMAGIC_DEFINITION as SilentSpell } from "./silentSpell.js";
 export const METAMAGIC_DEFINITIONS = [
   DazingSpell,
   EmpowerSpell,
+  EnlargeSpell,
   ExtendSpell,
   HeightenSpell,
   IntensifiedSpell,

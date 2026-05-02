@@ -49,3 +49,126 @@
   margin-bottom: 0;
 }
 
+.nas-settings-sections[data-nas-scheme="light"] .nas-settings-section {
+  border-color: rgba(0, 0, 0, 0.40);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.nas-settings-sections[data-nas-scheme="light"] .nas-settings-section > summary {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.nas-wound-types-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nas-wound-types-description {
+  margin: 0;
+}
+
+.nas-wound-types-toolbar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.nas-wound-types-toolbtn {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 3px 8px;
+}
+
+.nas-wound-types-list {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--color-border-light-primary, rgba(255, 255, 255, 0.20));
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.nas-wound-types-row {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 3px 2px;
+}
+
+.nas-wound-types-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nas-wound-types-check {
+  margin: 0;
+}
+
+.nas-wound-types-name {
+  line-height: 1.2;
+}
+
+.nas-wound-types-actions {
+  margin-top: 2px;
+}
+
+.nas-wound-types-actions > button[type="submit"] {
+  width: 100%;
+}
+
+.nas-wound-damage-types.app.window-app .window-content {
+  overflow: hidden auto;
+}
+
+.pf1 form .form-group.stacked.flags > label.checkbox {
+    flex: 0 0 auto;
+}
+
+/* Squeezing automation config form layout */
+.nas-squeezing-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nas-squeezing-config-form .nas-squeezing-config-lead {
+  margin: 0 0 2px;
+}
+
+.nas-squeezing-config-form .form-group {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  margin: 0;
+}
+
+.nas-squeezing-config-form .form-group > label {
+  line-height: 1.2;
+  padding-top: 4px;
+}
+
+.nas-squeezing-config-form .form-group > select,
+.nas-squeezing-config-form .form-group > input {
+  width: 100%;
+  min-width: 0;
+}
+
+.nas-squeezing-config-form .sheet-footer {
+  margin-top: 6px;
+}
+
+@media (max-width: 540px) {
+  .nas-squeezing-config-form .form-group {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .nas-squeezing-config-form .form-group > label {
+    padding-top: 0;
+  }
+}
+

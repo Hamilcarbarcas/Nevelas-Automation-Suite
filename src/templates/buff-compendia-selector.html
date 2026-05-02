@@ -1,5 +1,5 @@
 <form>
-  <p class="notes">Select compendia that contain buff items to include in the automated buff search.</p>
+  <p class="notes">{{localize "NAS.forms.buffCompendiaSelector.notes"}}</p>
   
   <div class="form-group">
     <div class="compendia-list" style="max-height: 400px; overflow-y: auto; padding: 5px;">
@@ -10,16 +10,15 @@
         <span class="compendium-id" style="color: #999; font-size: 0.8em;">{{compendium.id}}</span>
       </div>
       {{/each}}
-      <!-- Add world buffs checkbox as a separate row below the compendia -->
       <div class="compendium-row" style="display: flex; align-items: center; margin-bottom: 5px; padding: 5px; border-bottom: 1px solid #ddd; width: 100%;">
         <input type="checkbox" name="includeWorldBuffs" id="includeWorldBuffs" {{#if includeWorldBuffs}}checked{{/if}}>
-        <label for="includeWorldBuffs" style="margin-left: 10px; flex-grow: 1;">Include World Buffs (Items Directory)</label>
-        <span class="compendium-id" style="color: #999; font-size: 0.8em;">world</span>
+        <label for="includeWorldBuffs" style="margin-left: 10px; flex-grow: 1;">{{localize "NAS.forms.buffCompendiaSelector.includeWorldBuffs"}}</label>
+        <span class="compendium-id" style="color: #999; font-size: 0.8em;">{{worldIdLabel}}</span>
       </div>
     </div>
   </div>
   
   <button type="submit" class="save-compendia">
-    <i class="fas fa-save"></i> Save Selections
+    <i class="fas fa-save"></i> {{localize "NAS.forms.buffCompendiaSelector.saveSelections"}}
   </button>
 </form> 

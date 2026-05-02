@@ -1,7 +1,7 @@
 export const METAMAGIC_DEFINITION = {
   key: "silentSpell",
   name: "Silent Spell",
-  prefix: "Silent",
+  get prefix() { return globalThis.game?.i18n?.localize?.("NAS.metamagic.prefixes.silentSpell") ?? "Silent"; },
 };
 
 export function applySilentSpell(context) {

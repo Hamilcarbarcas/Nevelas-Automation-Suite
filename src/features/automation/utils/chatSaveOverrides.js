@@ -1,4 +1,5 @@
 import { MODULE } from "../../../common/module.js";
+import { elementFromHtmlLike, htmlElementFromRenderArg, onRenderChatMessageCompat } from "../../../common/foundryCompat.js";
 import { getDazingExtraRoundsForTarget } from "../metamagic/dazingSpell.js";
 
 const SAVE_BUTTON_SELECTOR = 'button[data-action="save"]';
@@ -63,10 +64,12 @@ function getPersistentLabel(isSecond) {
 }
 
 function attachTokenImageInteractions(html) {
+  const root = htmlElementFromRenderArg(html);
+  if (!root) return;
   const tokenImgs =
-    typeof html.find === "function"
-      ? html.find(".NAS-token img")
-      : html.querySelectorAll(".NAS-token img");
+    typeof root.find === "function"
+      ? root.find(".NAS-token img")
+      : root.querySelectorAll(".NAS-token img");
   if (!tokenImgs?.length) return;
   const attach = (img) => {
     img.addEventListener("click", async (ev) => {
@@ -173,7 +176,7 @@ function registerPersistentSaveChatMessageHook() {
     await message.update(updateData);
   });
 
-  Hooks.on("renderChatMessage", (message, html) => {
+  onRenderChatMessageCompat((message, html) => {
     const allowGlobal = message?.flags?.[MODULE.ID]?.[SAVE_TOKEN_FLAG];
     const isPersistent = message?.flags?.[MODULE.ID]?.metamagic?.persistentSave;
     if (!allowGlobal && !isPersistent) return;
@@ -309,7 +312,7 @@ async function rollMetamagicSaveForTarget(target, saveType, dc, options) {
 }
 
 export function registerPersistentSpellSaveOverrides(html) {
-  const root = Array.isArray(html) ? html[0] : html;
+  const root = elementFromHtmlLike(html);
   if (!root || root.dataset?.[LISTENER_FLAG]) return;
   root.dataset[LISTENER_FLAG] = "true";
   registerPersistentSaveChatMessageHook();

@@ -1,6 +1,11 @@
 import { MODULE } from '../module.js';
+import { jqueryFromHtmlLike } from '../foundryCompat.js';
 
 let _damageSettingsHelpersRegistered = false;
+
+function localizeDamageUi(path) {
+    return game.i18n.localize(`NAS.forms.damageUi.${path}`);
+}
 
 export function registerDamageSettingsHandlebarsHelpers() {
     if (_damageSettingsHelpersRegistered) return;
@@ -94,7 +99,7 @@ export function getDamageTypes(category = "immunity") {
         return true;
     });
 
-    const specialOptions = [{ id: "all", label: "All" }];
+    const specialOptions = [{ id: "all", label: game.i18n.localize("NAS.forms.damageUi.all") }];
     if (category === "damageReduction") {
         specialOptions.push({ id: "dr-none", label: "DR/-" });
     }
@@ -1099,6 +1104,7 @@ class GlobalDamageSettingsForm extends FormApplication {
 
     activateListeners(html) {
         super.activateListeners(html);
+        html = jqueryFromHtmlLike(html) ?? html;
         
         const initializeMultiselectContainers = () => {
             html.find('.multiselect-container').each((index, container) => {
@@ -1106,7 +1112,7 @@ class GlobalDamageSettingsForm extends FormApplication {
                 const tags = tagsContainer.find('.multiselect-tag');
                 
                 if (tags.length === 0 && !tagsContainer.find('.multiselect-placeholder').length) {
-                    tagsContainer.html('<span class="multiselect-placeholder">None Selected</span>');
+                    tagsContainer.html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                 }
             });
         };
@@ -1189,7 +1195,7 @@ class GlobalDamageSettingsForm extends FormApplication {
             dropdown.find(`.multiselect-option input[value="${value}"]`).closest('.multiselect-option').removeClass('selected');
             const tagsContainer = container.find('.multiselect-tags-container');
             if (tagsContainer.find('.multiselect-tag').length === 0) {
-                tagsContainer.html('<span class="multiselect-placeholder">None Selected</span>');
+                tagsContainer.html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
             }
         });
         
@@ -1204,7 +1210,7 @@ class GlobalDamageSettingsForm extends FormApplication {
             const isChecked = $(this).prop('checked');
             const allCheckbox = container.find('input[type="checkbox"][value="all"]');
             const allOption = container.find('.multiselect-option input[value="all"]').closest('.multiselect-option');
-            const allTag = `<div class="multiselect-tag" data-value="all"><span>All</span><i class="fas fa-times remove-tag"></i></div>`;
+            const allTag = `<div class="multiselect-tag" data-value="all"><span>${localizeDamageUi("all")}</span><i class="fas fa-times remove-tag"></i></div>`;
             const checkboxes = container.find('.multiselect-option input[type="checkbox"]');
             const nonAllCheckboxes = checkboxes.filter(function() { return $(this).val() !== 'all'; });
             if (value === 'all') {
@@ -1215,7 +1221,7 @@ class GlobalDamageSettingsForm extends FormApplication {
                 } else {
                     checkboxes.prop('checked', false);
                     checkboxes.closest('.multiselect-option').removeClass('selected');
-                    tagsContainer.empty().html('<span class="multiselect-placeholder">None Selected</span>');
+                    tagsContainer.empty().html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                 }
             } else {
                 if (!isChecked && allCheckbox.prop('checked')) {
@@ -1236,7 +1242,7 @@ class GlobalDamageSettingsForm extends FormApplication {
                     } else {
                         tagsContainer.find(`.multiselect-tag[data-value="${value}"]`).remove();
                         if (tagsContainer.find('.multiselect-tag').length === 0) {
-                            tagsContainer.html('<span class="multiselect-placeholder">None Selected</span>');
+                            tagsContainer.html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                         }
                     }
                 }
@@ -1272,7 +1278,7 @@ class ActionDamageSettingsForm extends FormApplication {
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             id: "action-damage-settings",
-            title: game.i18n.localize("NAS.damage.labels.actionSettings"),
+            title: game.i18n.localize("NAS.damage.titles.actionSettings"),
             template: `modules/${MODULE.ID}/src/templates/action-damage-settings.html`,
             width: 620,
             height: 620,
@@ -1870,6 +1876,7 @@ class ActionDamageSettingsForm extends FormApplication {
 
     activateListeners(html) {
         super.activateListeners(html);
+        html = jqueryFromHtmlLike(html) ?? html;
 
         function setupTriStateCheckboxes(html, selector, globalIgnoreHardnessValue) {
             html.find(selector).each(function() {
@@ -1991,7 +1998,7 @@ class ActionDamageSettingsForm extends FormApplication {
                     }
                     const allCheckbox = optionCheckboxes.filter('[value="all"]');
                     const allOption = optionCheckboxes.filter('[value="all"]').closest('.multiselect-option');
-                    const allTag = `<div class="multiselect-tag" data-value="all"><span>All</span><i class="fas fa-times remove-tag"></i></div>`;
+                    const allTag = `<div class="multiselect-tag" data-value="all"><span>${localizeDamageUi("all")}</span><i class="fas fa-times remove-tag"></i></div>`;
                     const nonAllCheckboxes = optionCheckboxes.filter(function() { return $(this).val() !== 'all'; });
                     const checkbox = $(this);
                     const value = checkbox.attr('data-value') || checkbox.val();
@@ -2005,7 +2012,7 @@ class ActionDamageSettingsForm extends FormApplication {
                         } else {
                             optionCheckboxes.prop('checked', false);
                             optionCheckboxes.closest('.multiselect-option').removeClass('selected');
-                            tagsContainer.empty().html('<span class="multiselect-placeholder">None Selected</span>');
+                            tagsContainer.empty().html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                         }
                     } else {
                         if (!isChecked && allCheckbox.prop('checked')) {
@@ -2026,7 +2033,7 @@ class ActionDamageSettingsForm extends FormApplication {
                             } else {
                                 tagsContainer.find(`.multiselect-tag[data-value="${value}"]`).remove();
                                 if (tagsContainer.find('.multiselect-tag').length === 0) {
-                                    tagsContainer.html('<span class="multiselect-placeholder">None Selected</span>');
+                                    tagsContainer.html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                                 }
                             }
                         }
@@ -2041,7 +2048,7 @@ class ActionDamageSettingsForm extends FormApplication {
                         if (globalList.length > 0) {
                             for (const typeId of globalList) {
                                 const label = labelForId(typeId);
-                                const tag = $(`<div class="multiselect-tag inherited-tag" data-value="${typeId}" data-inherited="true"><span>${label} (Inherited)</span></div>`);
+                                const tag = $(`<div class="multiselect-tag inherited-tag" data-value="${typeId}" data-inherited="true"><span>${label} (${localizeDamageUi("inherited")})</span></div>`);
                                 tagsContainer.append(tag);
                                 let inputName;
                                 if (attackKey) {
@@ -2052,7 +2059,7 @@ class ActionDamageSettingsForm extends FormApplication {
                                 hiddenInputsContainer.append(`<input type="hidden" name="${inputName}" value="${typeId}">`);
                             }
                         } else {
-                            tagsContainer.html('<span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>');
+                            tagsContainer.html(`<span class="multiselect-placeholder inherited-tag">${localizeDamageUi("noneSelectedInherited")}</span>`);
                         }
                         if (attackKey) {
                             html.find(`input[name="attacks.${attackKey}.${category}.inherit"]`).val('true');
@@ -2086,9 +2093,9 @@ class ActionDamageSettingsForm extends FormApplication {
                     });
                     tagsContainer.empty();
                     if (selected.includes('all')) {
-                        tagsContainer.append('<div class="multiselect-tag" data-value="all"><span>All</span><i class="fas fa-times remove-tag"></i></div>');
+                        tagsContainer.append(`<div class="multiselect-tag" data-value="all"><span>${localizeDamageUi("all")}</span><i class="fas fa-times remove-tag"></i></div>`);
                     } else if (selected.length === 0) {
-                        tagsContainer.html('<span class="multiselect-placeholder">None Selected</span>');
+                        tagsContainer.html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                     } else {
                         const sortedSelected = selected.slice().sort((a, b) => labelForId(a).localeCompare(labelForId(b), undefined, { sensitivity: 'base' }));
                         sortedSelected.forEach(typeId => {
@@ -2114,7 +2121,7 @@ class ActionDamageSettingsForm extends FormApplication {
                     selected = selected.slice().sort((a, b) => labelForId(a).localeCompare(labelForId(b), undefined, { sensitivity: 'base' }));
                     tagsContainer.empty();
                     if (selected.length === 0) {
-                        tagsContainer.html('<span class="multiselect-placeholder">None Selected</span>');
+                        tagsContainer.html(`<span class="multiselect-placeholder">${game.i18n.localize("NAS.common.placeholders.noneSelectedTitleCase")}</span>`);
                     } else {
                         selected.forEach(typeId => {
                             const label = labelForId(typeId);
@@ -2143,11 +2150,11 @@ class ActionDamageSettingsForm extends FormApplication {
                             for (const typeId of globalList) {
                                 const damageType = (damageTypes || []).find(dt => dt.id === typeId);
                                 const label = damageType ? damageType.label : typeId;
-                                const tag = $(`<div class="multiselect-tag inherited-tag" data-value="${typeId}" data-inherited="true"><span>${label} (Inherited)</span></div>`);
+                                const tag = $(`<div class="multiselect-tag inherited-tag" data-value="${typeId}" data-inherited="true"><span>${label} (${localizeDamageUi("inherited")})</span></div>`);
                                 tagsContainer.append(tag);
                             }
                         } else {
-                            tagsContainer.html('<span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>');
+                            tagsContainer.html(`<span class="multiselect-placeholder inherited-tag">${localizeDamageUi("noneSelectedInherited")}</span>`);
                         }
                         if (attackKey) {
                             html.find(`input[name="attacks.${attackKey}.${category}.inherit"]`).val('true');
@@ -2249,7 +2256,7 @@ class DamageUI {
 
     static _onGetItemActionSheetHeaderButtons(sheet, buttons) {
         buttons.unshift({
-            label: game.i18n.localize("NAS.damage.buttons.ActionSettings"),
+            label: game.i18n.localize("NAS.damage.titles.actionSettings"),
             class: "nas-damage-action-settings",
             icon: "fas fa-bolt",
             onclick: () => {
@@ -2403,7 +2410,3 @@ async function initializeDamageFlags(item) {
     itemActionSettings = { actions };
     await item.setFlag(MODULE.ID, 'itemActionSettings', itemActionSettings);
 } 
-
-
-
-

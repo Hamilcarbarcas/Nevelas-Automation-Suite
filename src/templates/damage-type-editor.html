@@ -9,9 +9,11 @@
         <label for="img">{{localize "NAS.forms.damageTypeForm.labels.img"}}:
             <i class="fas fa-info-circle tooltip-icon" data-tooltip="{{localize 'NAS.forms.damageTypeForm.tooltips.img'}}"></i>
         </label>
-        <div class="input-group">
-            <input type="hidden" name="img" value="{{item.img}}" data-dtype="String" class="input">
-            <button type="button" class="file-picker btn" data-type="image" style="margin-left: 8rem;" data-target="img">{{localize "NAS.common.buttons.browse"}}</button>
+        <div class="image-picker-row">
+            <input type="hidden" name="img" value="{{item.imgInput}}" data-dtype="String" class="input">
+            <img class="image-preview" data-image-preview src="{{item.imgPreview}}" alt="{{item.name}}">
+            <input type="color" name="img-color" value="{{item.imgColor}}" class="image-color-picker" data-tooltip="{{localize 'NAS.forms.damageTypeForm.tooltips.img'}}">
+            <button type="button" class="file-picker btn" data-type="image" data-target="img">{{localize "NAS.common.buttons.browse"}}</button>
         </div>
     </div>
     <div class="form-group field-group">

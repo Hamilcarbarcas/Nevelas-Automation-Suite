@@ -10,7 +10,7 @@
     }
     
     .action-damage-settings .multiselect-option.inherited-item::after {
-        content: "(Inherited)";
+        content: "({{localize 'NAS.forms.damageUi.inherited'}})";
         font-size: 0.8em;
         color: #777;
         font-style: italic;
@@ -21,16 +21,14 @@
 <div class="action-damage-settings">
     <form>
         <div class="form-header">
-            <h2>{{localize "NAS.damage.labels.actionSettings"}}: {{actionName}}</h2>
+            <h2>{{localize "NAS.damage.titles.actionSettings"}}: {{actionName}}</h2>
             <p class="notes">{{localize "NAS.damage.actionSettings.Description"}}</p>
         </div>
 
-        <!-- Hidden fields to track inheritance status -->
         <input type="hidden" name="immunity.inherit" value="{{action.immunity.inherit}}">
         <input type="hidden" name="resistance.inherit" value="{{action.resistance.inherit}}">
         <input type="hidden" name="damageReduction.inherit" value="{{action.damageReduction.inherit}}">
         
-        <!-- Hidden containers for checkbox values -->
         <div class="immunity-hidden-inputs" style="display: none;"></div>
         <div class="resistance-hidden-inputs" style="display: none;"></div>
         <div class="damageReduction-hidden-inputs" style="display: none;"></div>
@@ -65,7 +63,7 @@
                     <div class="input-group">
                         <input type="number" name="hardness.ignore.value" class="ignore-hardness-value {{#if action.hardness.ignore.inherit}}{{else}}{{#if (eq action.hardness.ignore.enabled false)}}hidden{{/if}}{{/if}}" value="{{action.hardness.ignore.value}}" min="0" step="1" {{#if action.hardness.ignore.inherit}}disabled{{/if}}>
                         {{#if action.hardness.ignore.inherit}}
-                          <span class="inherited-label" style="color: #888; font-size: 0.9em; margin-left: 6px;">(Inherited)</span>
+                          <span class="inherited-label" style="color: #888; font-size: 0.9em; margin-left: 6px;">({{localize "NAS.forms.damageUi.inherited"}})</span>
                         {{/if}}
                     </div>
                     <p class="hint">{{localize "NAS.damage.settings.IgnoreHardnessHint"}}</p>
@@ -85,25 +83,25 @@
                         {{#if action.immunity.bypass.isInheritedTypes}}
                             {{#if actionBypassImmunityShowAllTagInherited}}
                                 <div class="multiselect-tag inherited-tag" data-value="all" data-inherited="true">
-                                    <span>All (Inherited)</span>
+                                    <span>{{localize "NAS.forms.damageUi.allInherited"}}</span>
                                 </div>
                             {{else}}
                             {{#if action.immunity.bypass.types.length}}
                                 {{#each damageTypesImmunity as |damageType|}}
                                     {{#if (includes ../action.immunity.bypass.types damageType.id)}}
                                     <div class="multiselect-tag inherited-tag" data-value="{{damageType.id}}" data-inherited="true">
-                                        <span>{{damageType.label}} (Inherited)</span>
+                                        <span>{{damageType.label}} ({{localize "NAS.forms.damageUi.inherited"}})</span>
                                     </div>
                                     {{/if}}
                                 {{/each}}
                             {{else}}
-                                <span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>
+                                <span class="multiselect-placeholder inherited-tag">{{localize "NAS.forms.damageUi.noneSelectedInherited"}}</span>
                             {{/if}}
                             {{/if}}
                         {{else}}
                             {{#if actionBypassImmunityShowAllTag}}
                                 <div class="multiselect-tag" data-value="all">
-                                    <span>All</span>
+                                    <span>{{localize "NAS.forms.damageUi.all"}}</span>
                                     <i class="fas fa-times remove-tag"></i>
                                 </div>
                             {{else}}
@@ -117,7 +115,7 @@
                                         {{/if}}
                                     {{/each}}
                                 {{else}}
-                                    <span class="multiselect-placeholder">None Selected</span>
+                                    <span class="multiselect-placeholder">{{localize "NAS.common.placeholders.noneSelectedTitleCase"}}</span>
                                 {{/if}}
                             {{/if}}
                         {{/if}}
@@ -127,7 +125,7 @@
                     </div>
                     <div class="multiselect-dropdown">
                         <div class="multiselect-search">
-                            <input type="text" class="multiselect-search-input" placeholder="Search...">
+                            <input type="text" class="multiselect-search-input" placeholder="{{localize 'NAS.common.placeholders.search'}}">
                         </div>
                         <div class="multiselect-list">
                             {{#each damageTypesImmunity}}
@@ -136,7 +134,6 @@
                                 <span>{{this.label}}</span>
                             </label>
                             {{/each}}
-                            <!-- Hidden inputs for selected values will be added by JavaScript -->
                             <div class="immunity-hidden-inputs"></div>
                         </div>
                     </div>
@@ -148,25 +145,25 @@
                         {{#if action.resistance.bypass.isInheritedTypes}}
                             {{#if actionBypassResistanceShowAllTagInherited}}
                                 <div class="multiselect-tag inherited-tag" data-value="all" data-inherited="true">
-                                    <span>All (Inherited)</span>
+                                    <span>{{localize "NAS.forms.damageUi.allInherited"}}</span>
                                 </div>
                             {{else}}
                             {{#if action.resistance.bypass.types.length}}
                                 {{#each damageTypesResistance as |damageType|}}
                                     {{#if (includes ../action.resistance.bypass.types damageType.id)}}
                                     <div class="multiselect-tag inherited-tag" data-value="{{damageType.id}}" data-inherited="true">
-                                        <span>{{damageType.label}} (Inherited)</span>
+                                        <span>{{damageType.label}} ({{localize "NAS.forms.damageUi.inherited"}})</span>
                                     </div>
                                     {{/if}}
                                 {{/each}}
                             {{else}}
-                                <span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>
+                                <span class="multiselect-placeholder inherited-tag">{{localize "NAS.forms.damageUi.noneSelectedInherited"}}</span>
                             {{/if}}
                             {{/if}}
                         {{else}}
                             {{#if actionBypassResistanceShowAllTag}}
                                 <div class="multiselect-tag" data-value="all">
-                                    <span>All</span>
+                                    <span>{{localize "NAS.forms.damageUi.all"}}</span>
                                     <i class="fas fa-times remove-tag"></i>
                                 </div>
                             {{else}}
@@ -180,7 +177,7 @@
                                         {{/if}}
                                     {{/each}}
                                 {{else}}
-                                    <span class="multiselect-placeholder">None Selected</span>
+                                    <span class="multiselect-placeholder">{{localize "NAS.common.placeholders.noneSelectedTitleCase"}}</span>
                                 {{/if}}
                             {{/if}}
                         {{/if}}
@@ -190,7 +187,7 @@
                     </div>
                     <div class="multiselect-dropdown">
                         <div class="multiselect-search">
-                            <input type="text" class="multiselect-search-input" placeholder="Search...">
+                            <input type="text" class="multiselect-search-input" placeholder="{{localize 'NAS.common.placeholders.search'}}">
                         </div>
                         <div class="multiselect-list">
                             {{#each damageTypesResistance}}
@@ -199,7 +196,6 @@
                                 <span>{{this.label}}</span>
                             </label>
                             {{/each}}
-                            <!-- Hidden inputs for selected values will be added by JavaScript -->
                             <div class="resistance-hidden-inputs"></div>
                         </div>
                     </div>
@@ -211,25 +207,25 @@
                         {{#if action.damageReduction.bypass.isInheritedTypes}}
                             {{#if actionBypassDRShowAllTagInherited}}
                                 <div class="multiselect-tag inherited-tag" data-value="all" data-inherited="true">
-                                    <span>All (Inherited)</span>
+                                    <span>{{localize "NAS.forms.damageUi.allInherited"}}</span>
                                 </div>
                             {{else}}
                             {{#if action.damageReduction.bypass.types.length}}
                                 {{#each damageTypesDR as |damageType|}}
                                     {{#if (includes ../action.damageReduction.bypass.types damageType.id)}}
                                     <div class="multiselect-tag inherited-tag" data-value="{{damageType.id}}" data-inherited="true">
-                                        <span>{{damageType.label}} (Inherited)</span>
+                                        <span>{{damageType.label}} ({{localize "NAS.forms.damageUi.inherited"}})</span>
                                     </div>
                                     {{/if}}
                                 {{/each}}
                             {{else}}
-                                <span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>
+                                <span class="multiselect-placeholder inherited-tag">{{localize "NAS.forms.damageUi.noneSelectedInherited"}}</span>
                             {{/if}}
                             {{/if}}
                         {{else}}
                             {{#if actionBypassDRShowAllTag}}
                                 <div class="multiselect-tag" data-value="all">
-                                    <span>All</span>
+                                    <span>{{localize "NAS.forms.damageUi.all"}}</span>
                                     <i class="fas fa-times remove-tag"></i>
                                 </div>
                             {{else}}
@@ -243,7 +239,7 @@
                                         {{/if}}
                                     {{/each}}
                                 {{else}}
-                                    <span class="multiselect-placeholder">None Selected</span>
+                                    <span class="multiselect-placeholder">{{localize "NAS.common.placeholders.noneSelectedTitleCase"}}</span>
                                 {{/if}}
                             {{/if}}
                         {{/if}}
@@ -253,7 +249,7 @@
                     </div>
                     <div class="multiselect-dropdown">
                         <div class="multiselect-search">
-                            <input type="text" class="multiselect-search-input" placeholder="Search...">
+                            <input type="text" class="multiselect-search-input" placeholder="{{localize 'NAS.common.placeholders.search'}}">
                         </div>
                         <div class="multiselect-list">
                             {{#each damageTypesDR}}
@@ -262,7 +258,6 @@
                                 <span>{{this.label}}</span>
                             </label>
                             {{/each}}
-                            <!-- Hidden inputs for selected values will be added by JavaScript -->
                             <div class="damageReduction-hidden-inputs"></div>
                         </div>
                     </div>
@@ -283,12 +278,10 @@
                 <div class="attack-section" data-attack-key="{{this.key}}">
                     <div class="attack-header">{{this.name}}</div>
                     
-                    <!-- Hidden fields to track attack inheritance status -->
                     <input type="hidden" name="attacks.{{this.key}}.immunity.inherit" value="{{this.immunity.inherit}}">
                     <input type="hidden" name="attacks.{{this.key}}.resistance.inherit" value="{{this.resistance.inherit}}">
                     <input type="hidden" name="attacks.{{this.key}}.damageReduction.inherit" value="{{this.damageReduction.inherit}}">
                     
-                    <!-- Hidden containers for attack checkbox values -->
                     <div class="immunity-hidden-inputs-{{@index}}" style="display: none;"></div>
                     <div class="resistance-hidden-inputs-{{@index}}" style="display: none;"></div>
                     <div class="damageReduction-hidden-inputs-{{@index}}" style="display: none;"></div>
@@ -314,9 +307,9 @@
                             {{localize "NAS.damage.settings.IgnoreHardness"}}
                         </label>
                         <div class="input-group">
-                            <input type="number" name="attacks.{{this.key}}.hardness.ignore.value" class="ignore-hardness-value-{{@index}} {{#if this.hardness.ignore.inherit}}{{else}}{{#if (eq this.hardness.ignore.enabled false)}}hidden{{/if}}{{/if}}" value="{{this.hardness.ignore.value}}" min="0" step="1" {{#if this.hardness.ignore.inherit}}disabled{{/if}}>
+                        <input type="number" name="attacks.{{this.key}}.hardness.ignore.value" class="ignore-hardness-value-{{@index}} {{#if this.hardness.ignore.inherit}}{{else}}{{#if (eq this.hardness.ignore.enabled false)}}hidden{{/if}}{{/if}}" value="{{this.hardness.ignore.value}}" min="0" step="1" {{#if this.hardness.ignore.inherit}}disabled{{/if}}>
                             {{#if this.hardness.ignore.inherit}}
-                              <span class="inherited-label" style="color: #888; font-size: 0.9em; margin-left: 6px;">(Inherited)</span>
+                              <span class="inherited-label" style="color: #888; font-size: 0.9em; margin-left: 6px;">({{localize "NAS.forms.damageUi.inherited"}})</span>
                             {{/if}}
                         </div>
                     </div>
@@ -328,26 +321,26 @@
                                 {{#if this.immunity.bypass.isInheritedTypes}}
                                     {{#if (includes this.immunity.bypass.types "all")}}
                                         <div class="multiselect-tag inherited-tag" data-value="all" data-inherited="true">
-                                            <span>All (Inherited)</span>
+                                            <span>{{localize "NAS.forms.damageUi.allInherited"}}</span>
                                         </div>
                                     {{else}}
                                     {{#if this.immunity.bypass.types.length}}
                                         {{#each ../damageTypesImmunity as |damageType|}}
                                             {{#if (includes ../this.immunity.bypass.types damageType.id)}}
                                             <div class="multiselect-tag inherited-tag" data-value="{{damageType.id}}" data-inherited="true">
-                                                <span>{{damageType.label}} (Inherited)</span>
+                                                <span>{{damageType.label}} ({{localize "NAS.forms.damageUi.inherited"}})</span>
                                             </div>
                                             {{/if}}
                                         {{/each}}
                                     {{else}}
-                                        <span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>
+                                        <span class="multiselect-placeholder inherited-tag">{{localize "NAS.forms.damageUi.noneSelectedInherited"}}</span>
                                     {{/if}}
                                     {{/if}}
                                 {{else}}
                                     {{!-- Show only All tag if all types are selected --}}
                                     {{#if (and (includes this.immunity.bypass.types "all") (eq this.immunity.bypass.types.length ../damageTypesImmunity.length))}}
                                         <div class="multiselect-tag" data-value="all">
-                                            <span>All</span>
+                                            <span>{{localize "NAS.forms.damageUi.all"}}</span>
                                             <i class="fas fa-times remove-tag"></i>
                                         </div>
                                     {{else}}
@@ -361,7 +354,7 @@
                                             {{/if}}
                                         {{/each}}
                                     {{else}}
-                                        <span class="multiselect-placeholder">None Selected</span>
+                                        <span class="multiselect-placeholder">{{localize "NAS.common.placeholders.noneSelectedTitleCase"}}</span>
                                     {{/if}}
                                     {{/if}}
                                 {{/if}}
@@ -371,7 +364,7 @@
                             </div>
                             <div class="multiselect-dropdown">
                                 <div class="multiselect-search">
-                                    <input type="text" class="multiselect-search-input" placeholder="Search...">
+                                    <input type="text" class="multiselect-search-input" placeholder="{{localize 'NAS.common.placeholders.search'}}">
                                 </div>
                                 <div class="multiselect-list">
                                     {{#each ../damageTypesImmunity}}
@@ -385,7 +378,6 @@
                                         <span>{{this.label}}</span>
                                     </label>
                                     {{/each}}
-                                    <!-- Hidden inputs for selected values will be added by JavaScript -->
                                     <div class="immunity-hidden-inputs-{{@index}}"></div>
                                 </div>
                             </div>
@@ -397,25 +389,25 @@
                                 {{#if this.resistance.bypass.isInheritedTypes}}
                                     {{#if (includes this.resistance.bypass.types "all")}}
                                         <div class="multiselect-tag inherited-tag" data-value="all" data-inherited="true">
-                                            <span>All (Inherited)</span>
+                                            <span>{{localize "NAS.forms.damageUi.allInherited"}}</span>
                                         </div>
                                     {{else}}
                                     {{#if this.resistance.bypass.types.length}}
                                         {{#each ../damageTypesResistance as |damageType|}}
                                             {{#if (includes ../this.resistance.bypass.types damageType.id)}}
                                             <div class="multiselect-tag inherited-tag" data-value="{{damageType.id}}" data-inherited="true">
-                                                <span>{{damageType.label}} (Inherited)</span>
+                                                <span>{{damageType.label}} ({{localize "NAS.forms.damageUi.inherited"}})</span>
                                             </div>
                                             {{/if}}
                                         {{/each}}
                                     {{else}}
-                                        <span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>
+                                        <span class="multiselect-placeholder inherited-tag">{{localize "NAS.forms.damageUi.noneSelectedInherited"}}</span>
                                     {{/if}}
                                     {{/if}}
                                 {{else}}
                                     {{#if (and (includes this.resistance.bypass.types "all") (eq this.resistance.bypass.types.length ../damageTypesResistance.length))}}
                                         <div class="multiselect-tag" data-value="all">
-                                            <span>All</span>
+                                            <span>{{localize "NAS.forms.damageUi.all"}}</span>
                                             <i class="fas fa-times remove-tag"></i>
                                         </div>
                                     {{else}}
@@ -429,7 +421,7 @@
                                             {{/if}}
                                         {{/each}}
                                     {{else}}
-                                        <span class="multiselect-placeholder">None Selected</span>
+                                        <span class="multiselect-placeholder">{{localize "NAS.common.placeholders.noneSelectedTitleCase"}}</span>
                                     {{/if}}
                                     {{/if}}
                                 {{/if}}
@@ -439,7 +431,7 @@
                             </div>
                             <div class="multiselect-dropdown">
                                 <div class="multiselect-search">
-                                    <input type="text" class="multiselect-search-input" placeholder="Search...">
+                                    <input type="text" class="multiselect-search-input" placeholder="{{localize 'NAS.common.placeholders.search'}}">
                                 </div>
                                 <div class="multiselect-list">
                                     {{#each ../damageTypesResistance}}
@@ -453,7 +445,6 @@
                                         <span>{{this.label}}</span>
                                     </label>
                                     {{/each}}
-                                    <!-- Hidden inputs for selected values will be added by JavaScript -->
                                     <div class="resistance-hidden-inputs-{{@index}}"></div>
                                 </div>
                             </div>
@@ -465,25 +456,25 @@
                                 {{#if this.damageReduction.bypass.isInheritedTypes}}
                                     {{#if (includes this.damageReduction.bypass.types "all")}}
                                         <div class="multiselect-tag inherited-tag" data-value="all" data-inherited="true">
-                                            <span>All (Inherited)</span>
+                                            <span>{{localize "NAS.forms.damageUi.allInherited"}}</span>
                                         </div>
                                     {{else}}
                                     {{#if this.damageReduction.bypass.types.length}}
                                         {{#each ../damageTypesDR as |damageType|}}
                                             {{#if (includes ../this.damageReduction.bypass.types damageType.id)}}
                                             <div class="multiselect-tag inherited-tag" data-value="{{damageType.id}}" data-inherited="true">
-                                                <span>{{damageType.label}} (Inherited)</span>
+                                                <span>{{damageType.label}} ({{localize "NAS.forms.damageUi.inherited"}})</span>
                                             </div>
                                             {{/if}}
                                         {{/each}}
                                     {{else}}
-                                        <span class="multiselect-placeholder inherited-tag">None Selected (Inherited)</span>
+                                        <span class="multiselect-placeholder inherited-tag">{{localize "NAS.forms.damageUi.noneSelectedInherited"}}</span>
                                     {{/if}}
                                     {{/if}}
                                 {{else}}
                                     {{#if (and (includes this.damageReduction.bypass.types "all") (eq this.damageReduction.bypass.types.length ../damageTypesDR.length))}}
                                         <div class="multiselect-tag" data-value="all">
-                                            <span>All</span>
+                                            <span>{{localize "NAS.forms.damageUi.all"}}</span>
                                             <i class="fas fa-times remove-tag"></i>
                                         </div>
                                     {{else}}
@@ -497,7 +488,7 @@
                                             {{/if}}
                                         {{/each}}
                                     {{else}}
-                                        <span class="multiselect-placeholder">None Selected</span>
+                                        <span class="multiselect-placeholder">{{localize "NAS.common.placeholders.noneSelectedTitleCase"}}</span>
                                     {{/if}}
                                     {{/if}}
                                 {{/if}}
@@ -507,7 +498,7 @@
                             </div>
                             <div class="multiselect-dropdown">
                                 <div class="multiselect-search">
-                                    <input type="text" class="multiselect-search-input" placeholder="Search...">
+                                    <input type="text" class="multiselect-search-input" placeholder="{{localize 'NAS.common.placeholders.search'}}">
                                 </div>
                                 <div class="multiselect-list">
                                     {{#each ../damageTypesDR}}
@@ -521,7 +512,6 @@
                                         <span>{{this.label}}</span>
                                     </label>
                                     {{/each}}
-                                    <!-- Hidden inputs for selected values will be added by JavaScript -->
                                     <div class="damageReduction-hidden-inputs-{{@index}}"></div>
                                 </div>
                             </div>
@@ -540,10 +530,3 @@
         </div>
     </form>
 </div> 
-
-
-
-
-
-
-
